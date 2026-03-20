@@ -350,28 +350,6 @@ act -n  # Dry run
 - **CloudWatch**: AWS Console → CloudWatch → Log Groups
 - **Application**: `/var/log/finovabank/`
 
-## Cost Optimization
-
-### Estimated Monthly Costs (us-west-2)
-
-- VPC, subnets, routing: $0
-- NAT Gateways (3x): ~$100
-- Application Load Balancer: ~$25
-- EC2 instances (3x t3.medium): ~$95
-- RDS MySQL (db.t3.medium): ~$60
-- EBS volumes: ~$20
-- CloudWatch Logs: ~$10
-- S3 storage: ~$5
-- **Total**: ~$315/month (basic setup)
-
-### Cost-Saving Tips
-
-- Use Spot instances for non-critical workloads
-- Right-size EC2 instances based on metrics
-- Clean up old EBS snapshots
-- Use S3 Intelligent-Tiering for logs
-- Consider reserved instances for production
-
 ## Cleanup
 
 ### Destroy Infrastructure
