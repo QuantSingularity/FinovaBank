@@ -4,7 +4,7 @@
 [![Test Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)](https://github.com/quantsingularity/FinovaBank/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 🏦 Digital Banking Platform with AI & Blockchain
+## Digital Banking Platform with AI & Blockchain
 
 FinovaBank is a modern digital banking platform that combines traditional banking services with cutting-edge technologies like artificial intelligence and blockchain to provide secure, efficient, and personalized financial services.
 
