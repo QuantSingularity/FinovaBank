@@ -1,10 +1,9 @@
 import 'react-native';
-import React from 'react';
-import {render, fireEvent, waitFor} from '@testing-library/react-native';
-import RegisterScreen from '../../screens/RegisterScreen';
-import {useAuth} from '../../context/AuthContext';
 import {useNavigation} from '@react-navigation/native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import {Alert} from 'react-native';
+import {useAuth} from '../../context/AuthContext';
+import RegisterScreen from '../../screens/RegisterScreen';
 
 // Mock the useAuth hook
 jest.mock('../../context/AuthContext');

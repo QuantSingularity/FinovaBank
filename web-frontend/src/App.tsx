@@ -1,18 +1,17 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
 import { Box } from "@mui/material";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import AccountDetails from "./pages/AccountDetails";
-import Transactions from "./pages/Transactions";
-import Loans from "./pages/Loans";
-import SavingsGoals from "./pages/SavingsGoals";
-import NotFound from "./pages/NotFound";
+import { Route, Routes } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
+import AccountDetails from "./pages/AccountDetails";
+import Dashboard from "./pages/Dashboard";
+import Loans from "./pages/Loans";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import Register from "./pages/Register";
+import SavingsGoals from "./pages/SavingsGoals";
+import Transactions from "./pages/Transactions";
 
 function App() {
   return (

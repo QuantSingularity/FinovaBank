@@ -1,54 +1,53 @@
 // Modern Dashboard component with enhanced UI
-import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Avatar,
-  Divider,
-  CircularProgress,
-  Alert,
-  useTheme,
-  IconButton,
-  Tab,
-  Tabs,
-  Paper,
-  Chip,
-} from "@mui/material";
+
 import {
   AccountBalance as AccountIcon,
-  TrendingUp as TrendingUpIcon,
-  CreditCard as CreditCardIcon,
-  Savings as SavingsIcon,
-  ArrowUpward as ArrowUpwardIcon,
-  ArrowDownward as ArrowDownwardIcon,
   Add as AddIcon,
-  MoreHoriz as MoreHorizIcon,
-  AttachMoney as AttachMoneyIcon,
-  Receipt as ReceiptIcon,
-  ShowChart as ShowChartIcon,
-  Notifications as NotificationsIcon,
+  ArrowDownward as ArrowDownwardIcon,
   ArrowForward as ArrowForwardIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  AttachMoney as AttachMoneyIcon,
+  CreditCard as CreditCardIcon,
+  MoreHoriz as MoreHorizIcon,
+  Notifications as NotificationsIcon,
+  Receipt as ReceiptIcon,
+  Savings as SavingsIcon,
+  ShowChart as ShowChartIcon,
+  TrendingUp as TrendingUpIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { accountAPI, transactionAPI, savingsAPI } from "../services/api";
 import {
-  Chart as ChartJS,
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  Paper,
+  Tab,
+  Tabs,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import {
   ArcElement,
-  Tooltip,
-  Legend,
   CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  Chart as ChartJS,
   Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
 } from "chart.js";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
-
+import { useNavigate } from "react-router-dom";
 // Import custom components
 import GridCompatibility from "../components/GridCompatibility";
+import { useAuth } from "../context/AuthContext";
+import { accountAPI, savingsAPI, transactionAPI } from "../services/api";
 
 // Register ChartJS components
 ChartJS.register(
@@ -150,9 +149,7 @@ const Dashboard: React.FC = () => {
       },
       tooltip: {
         callbacks: {
-          label: function (context: any) {
-            return `${context.label}: ${context.parsed}%`;
-          },
+          label: (context: any) => `${context.label}: ${context.parsed}%`,
         },
       },
     },
@@ -195,9 +192,7 @@ const Dashboard: React.FC = () => {
         boxPadding: 6,
         usePointStyle: true,
         callbacks: {
-          label: function (context: any) {
-            return `$${context.parsed.y.toLocaleString()}`;
-          },
+          label: (context: any) => `$${context.parsed.y.toLocaleString()}`,
         },
       },
     },
@@ -222,9 +217,7 @@ const Dashboard: React.FC = () => {
           font: {
             size: 12,
           },
-          callback: function (value: any) {
-            return "$" + value.toLocaleString();
-          },
+          callback: (value: any) => `$${value.toLocaleString()}`,
         },
       },
     },
@@ -235,7 +228,7 @@ const Dashboard: React.FC = () => {
     },
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 

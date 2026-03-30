@@ -1,20 +1,17 @@
-import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ActivityIndicator, View} from 'react-native';
-
+import {useAuth} from '../context/AuthContext';
+import AccountDetailsScreen from '../screens/AccountDetailsScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import LoansScreen from '../screens/LoansScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import AccountDetailsScreen from '../screens/AccountDetailsScreen';
-import TransactionsScreen from '../screens/TransactionsScreen';
+import SavingsGoalsScreen from '../screens/SavingsGoalsScreen';
 import TransactionDetailsScreen from '../screens/TransactionDetailsScreen';
 import TransactionFiltersScreen from '../screens/TransactionFiltersScreen';
-import LoansScreen from '../screens/LoansScreen';
-import SavingsGoalsScreen from '../screens/SavingsGoalsScreen';
-
-import {useAuth} from '../context/AuthContext';
-import {commonStyles, colors} from '../styles/commonStyles';
+import TransactionsScreen from '../screens/TransactionsScreen';
+import {colors, commonStyles} from '../styles/commonStyles';
 
 // Define the type for the stack navigator parameters
 export type RootStackParamList = {
@@ -71,7 +68,10 @@ const AppNavigator = () => {
             <Stack.Screen
               name="Register"
               component={RegisterScreen}
-              options={{title: 'Create Account', headerBackTitleVisible: false}}
+              options={{
+                title: 'Create Account',
+                headerBackTitleVisible: false,
+              }}
             />
           </>
         ) : (

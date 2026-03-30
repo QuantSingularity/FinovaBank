@@ -1,12 +1,13 @@
-import React, {
+import type React from "react";
+import {
   createContext,
-  useState,
+  type ReactNode,
   useContext,
-  ReactNode,
   useEffect,
+  useState,
 } from "react";
-import { authAPI } from "../services/api";
 import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;

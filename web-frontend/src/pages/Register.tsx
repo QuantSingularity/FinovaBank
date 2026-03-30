@@ -1,42 +1,44 @@
 // Modern Register page with enhanced UI
-import React, { useState } from "react";
+
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Link,
-  InputAdornment,
-  IconButton,
-  Alert,
-  useTheme,
-  Divider,
-  Checkbox,
-  FormControlLabel,
-  Stepper,
-  Step,
-  StepLabel,
-} from "@mui/material";
-import {
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
+  Apple as AppleIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Devices as DevicesIcon,
   Email as EmailIcon,
+  Facebook as FacebookIcon,
+  Google as GoogleIcon,
   Lock as LockIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
-  ChevronRight as ChevronRightIcon,
-  ChevronLeft as ChevronLeftIcon,
-  Google as GoogleIcon,
-  Apple as AppleIcon,
-  Facebook as FacebookIcon,
   Security as SecurityIcon,
   Support as SupportIcon,
-  Devices as DevicesIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  Link,
+  Paper,
+  Step,
+  StepLabel,
+  Stepper,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import type React from "react";
+import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import GridCompatibility from "../components/GridCompatibility";
+import { useAuth } from "../context/AuthContext";
 
 const Register: React.FC = () => {
   const theme = useTheme();

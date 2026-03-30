@@ -1,19 +1,19 @@
-import React, {useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useState} from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, colors} from '../styles/commonStyles'; // Import common styles and colors
-import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../navigation/AppNavigator';
 import {useAuth} from '../context/AuthContext'; // Import useAuth hook
+import type {RootStackParamList} from '../navigation/AppNavigator';
+import {colors, commonStyles} from '../styles/commonStyles'; // Import common styles and colors
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,

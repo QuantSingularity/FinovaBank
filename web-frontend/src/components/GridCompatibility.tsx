@@ -1,7 +1,8 @@
 // GridCompatibility.tsx
 // A simplified compatibility layer for Material UI Grid component
-import React from "react";
-import { Grid as MuiGrid, SxProps, Theme } from "@mui/material";
+
+import { Grid as MuiGrid, type SxProps, type Theme } from "@mui/material";
+import type React from "react";
 
 interface GridCompatibilityProps {
   children: React.ReactNode;

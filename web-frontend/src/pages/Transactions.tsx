@@ -1,43 +1,45 @@
 // Modern Transactions page with enhanced UI
-import React, { useState, useEffect } from "react";
+
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Divider,
-  CircularProgress,
-  Alert,
-  useTheme,
-  Tabs,
-  Tab,
-  TextField,
-  InputAdornment,
-  IconButton,
-  Avatar,
-  Chip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
-import {
-  Search as SearchIcon,
-  FilterList as FilterListIcon,
-  ArrowUpward as ArrowUpwardIcon,
-  ArrowDownward as ArrowDownwardIcon,
-  MoreVert as MoreVertIcon,
-  Receipt as ReceiptIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Download as DownloadIcon,
   Add as AddIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  ArrowUpward as ArrowUpwardIcon,
   AttachMoney as AttachMoneyIcon,
   DateRange as DateRangeIcon,
+  Delete as DeleteIcon,
+  Download as DownloadIcon,
+  Edit as EditIcon,
+  FilterList as FilterListIcon,
+  MoreVert as MoreVertIcon,
+  Receipt as ReceiptIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  IconButton,
+  InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Paper,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { transactionAPI } from "../services/api";
 import GridCompatibility from "../components/GridCompatibility";
+import { transactionAPI } from "../services/api";
 
 const Transactions: React.FC = () => {
   const theme = useTheme();
@@ -70,7 +72,7 @@ const Transactions: React.FC = () => {
     fetchTransactions();
   }, []);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
@@ -98,11 +100,9 @@ const Transactions: React.FC = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        (transaction.description &&
-          transaction.description.toLowerCase().includes(query)) ||
-        (transaction.category &&
-          transaction.category.toLowerCase().includes(query)) ||
-        (transaction.amount && transaction.amount.toString().includes(query))
+        transaction.description?.toLowerCase().includes(query) ||
+        transaction.category?.toLowerCase().includes(query) ||
+        transaction.amount?.toString().includes(query)
       );
     }
 

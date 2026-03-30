@@ -1,9 +1,8 @@
 import 'react-native';
-import React from 'react';
 import {render, waitFor} from '@testing-library/react-native';
+import {useAuth} from '../../context/AuthContext';
 import SavingsGoalsScreen from '../../screens/SavingsGoalsScreen';
 import {getAccountSavingsGoals} from '../../services/api';
-import {useAuth} from '../../context/AuthContext';
 
 jest.mock('../../services/api');
 jest.mock('../../context/AuthContext');

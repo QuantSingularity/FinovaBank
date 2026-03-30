@@ -1,18 +1,22 @@
-import React, {useState, useEffect} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+  type RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import {useEffect, useState} from 'react';
+import {
   ActivityIndicator,
-  TouchableOpacity,
   Alert,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, colors} from '../styles/commonStyles';
+import type {RootStackParamList} from '../navigation/AppNavigator';
 import {getTransactionDetails} from '../services/api';
-import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
-import {RootStackParamList} from '../navigation/AppNavigator';
+import {colors, commonStyles} from '../styles/commonStyles';
 
 // Define the route prop type for this screen
 type TransactionDetailsScreenRouteProp = RouteProp<
@@ -87,7 +91,7 @@ const TransactionDetailsScreen = () => {
     };
 
     fetchTransactionDetails();
-  }, [transactionId]);
+  }, [transactionId, initialTransaction]);
 
   if (loading) {
     return (

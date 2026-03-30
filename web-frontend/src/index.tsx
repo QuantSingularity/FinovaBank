@@ -1,11 +1,12 @@
+import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider } from "@mui/material/styles";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
 import "./index.css";
-import App from "./App";
 import theme from "../config/theme";
+import App from "./App";
+
 // import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(

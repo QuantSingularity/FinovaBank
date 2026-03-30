@@ -1,5 +1,5 @@
-import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import type React from "react";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App";
 

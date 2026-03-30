@@ -1,34 +1,36 @@
 // Modern Login page with enhanced UI
-import React, { useState } from "react";
+
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Link,
-  InputAdornment,
-  IconButton,
-  Alert,
-  useTheme,
-  Divider,
-  Checkbox,
-  FormControlLabel,
-} from "@mui/material";
-import {
+  Apple as AppleIcon,
+  Devices as DevicesIcon,
+  Email as EmailIcon,
+  Facebook as FacebookIcon,
+  Google as GoogleIcon,
+  Lock as LockIcon,
+  TrendingUp as TrendingUpIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  Email as EmailIcon,
-  Lock as LockIcon,
-  Google as GoogleIcon,
-  Apple as AppleIcon,
-  Facebook as FacebookIcon,
-  TrendingUp as TrendingUpIcon,
-  Devices as DevicesIcon,
 } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  Link,
+  Paper,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import type React from "react";
+import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import GridCompatibility from "../components/GridCompatibility";
+import { useAuth } from "../context/AuthContext";
 
 const Login: React.FC = () => {
   const theme = useTheme();

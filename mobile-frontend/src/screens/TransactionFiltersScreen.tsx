@@ -1,16 +1,20 @@
-import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
+  type RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import {useState} from 'react';
+import {
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, colors} from '../styles/commonStyles';
-import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
-import {RootStackParamList} from '../navigation/AppNavigator';
+import type {RootStackParamList} from '../navigation/AppNavigator';
+import {colors, commonStyles} from '../styles/commonStyles';
 
 // Define the route prop type for this screen
 type TransactionFiltersScreenRouteProp = RouteProp<

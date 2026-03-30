@@ -1,10 +1,9 @@
 import 'react-native';
-import React from 'react';
-import {render, waitFor, fireEvent} from '@testing-library/react-native';
+import {useNavigation} from '@react-navigation/native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
+import {useAuth} from '../../context/AuthContext';
 import TransactionsScreen from '../../screens/TransactionsScreen';
 import {getAccountTransactions} from '../../services/api';
-import {useAuth} from '../../context/AuthContext';
-import {useNavigation} from '@react-navigation/native';
 
 jest.mock('../../services/api');
 jest.mock('../../context/AuthContext');

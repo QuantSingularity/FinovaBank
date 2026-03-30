@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from "react";
 import {
+  Alert,
   Box,
-  Typography,
-  Grid,
+  Button,
   Card,
   CardContent,
   CardHeader,
-  Button,
+  Chip,
+  CircularProgress,
   Divider,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Chip,
-  CircularProgress,
-  Alert,
+  Typography,
   useTheme,
 } from "@mui/material";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { accountAPI, transactionAPI } from "../services/api";
 

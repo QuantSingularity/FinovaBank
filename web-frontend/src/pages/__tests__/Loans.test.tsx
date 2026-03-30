@@ -1,5 +1,5 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
+import type React from "react";
 import "@testing-library/jest-dom";
 
 // Assuming the component exists in the original project at:

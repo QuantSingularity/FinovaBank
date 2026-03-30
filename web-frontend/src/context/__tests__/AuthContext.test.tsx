@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { render, screen, act } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import type React from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import "@testing-library/jest-dom";
 
 // Assuming the context exists in the original project at:

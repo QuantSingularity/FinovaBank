@@ -1,19 +1,19 @@
-import React, {useState, useEffect} from 'react';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useEffect, useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
   ActivityIndicator,
   Alert,
+  FlatList,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, responsiveWidth} from '../styles/commonStyles';
-import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../navigation/AppNavigator';
-import {getAccountLoans, applyForLoan, getLoanTypes} from '../services/api';
 import {useAuth} from '../context/AuthContext';
+import type {RootStackParamList} from '../navigation/AppNavigator';
+import {applyForLoan, getAccountLoans, getLoanTypes} from '../services/api';
+import {commonStyles, responsiveWidth} from '../styles/commonStyles';
 
 // Define the structure for loan data
 interface Loan {
@@ -300,7 +300,7 @@ const LoanApplicationForm = ({visible, onClose, onSubmit, loanTypes}) => {
             onSubmit({
               loanType,
               amount: parseFloat(amount),
-              term: parseInt(term),
+              term: parseInt(term, 10),
               purpose,
             })
           }>

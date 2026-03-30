@@ -1,5 +1,5 @@
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Assuming the component exists in the original project at:

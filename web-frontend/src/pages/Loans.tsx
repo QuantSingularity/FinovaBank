@@ -1,30 +1,24 @@
-import React, { useState, useEffect } from "react";
 import {
   Box,
-  Typography,
+  Button,
   Card,
   CardContent,
   CardHeader,
-  Button,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Chip,
-  TextField,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  MenuItem,
+  TextField,
+  Typography,
   useTheme,
 } from "@mui/material";
 import { useFormik } from "formik";
+import type React from "react";
+import { useEffect, useState } from "react";
 import * as yup from "yup";
 import { loanAPI } from "../services/api";
 

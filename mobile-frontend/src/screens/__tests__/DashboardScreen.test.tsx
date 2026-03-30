@@ -1,8 +1,7 @@
 import 'react-native';
-import React from 'react';
-import {render, fireEvent} from '@testing-library/react-native';
-import DashboardScreen from '../../screens/DashboardScreen';
 import {useNavigation} from '@react-navigation/native';
+import {fireEvent, render} from '@testing-library/react-native';
+import DashboardScreen from '../../screens/DashboardScreen';
 
 jest.mock('@react-navigation/native');
 

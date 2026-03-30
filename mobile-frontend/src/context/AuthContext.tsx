@@ -1,18 +1,19 @@
-import React, {
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type React from 'react';
+import {
   createContext,
-  useState,
+  type ReactNode,
   useContext,
   useEffect,
-  ReactNode,
+  useState,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  type AuthResponse,
+  type LoginCredentials,
   loginUser,
-  registerUser,
   logoutUser,
-  AuthResponse,
-  LoginCredentials,
-  RegisterData,
+  type RegisterData,
+  registerUser,
 } from '../services/api';
 
 // Define the shape of the auth context data

@@ -1,15 +1,14 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import {commonStyles, colors, responsiveWidth} from '../styles/commonStyles'; // Import common styles and colors
 import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../navigation/AppNavigator';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import type {RootStackParamList} from '../navigation/AppNavigator';
+import {colors, commonStyles} from '../styles/commonStyles'; // Import common styles and colors
 
 // Define the navigation prop type for this screen
 type DashboardScreenNavigationProp = NativeStackNavigationProp<

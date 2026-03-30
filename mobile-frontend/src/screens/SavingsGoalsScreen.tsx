@@ -1,22 +1,22 @@
-import React, {useState, useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
   ActivityIndicator,
   Alert,
-  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, responsiveWidth} from '../styles/commonStyles';
-import {
-  getAccountSavingsGoals,
-  createSavingsGoal,
-  contributeTosavingsGoal,
-  deleteSavingsGoal,
-} from '../services/api';
 import {useAuth} from '../context/AuthContext';
+import {
+  contributeTosavingsGoal,
+  createSavingsGoal,
+  deleteSavingsGoal,
+  getAccountSavingsGoals,
+} from '../services/api';
+import {commonStyles, responsiveWidth} from '../styles/commonStyles';
 
 // Define the structure for savings goal data
 interface SavingsGoal {
@@ -54,7 +54,7 @@ const SavingsGoalsScreen = ({route}: any) => {
 
   useEffect(() => {
     fetchSavingsGoals();
-  }, [accountId]);
+  }, [fetchSavingsGoals]);
 
   const fetchSavingsGoals = async () => {
     if (!accountId) {
@@ -88,7 +88,7 @@ const SavingsGoalsScreen = ({route}: any) => {
     }
 
     const targetAmount = parseFloat(newGoalAmount);
-    if (isNaN(targetAmount) || targetAmount <= 0) {
+    if (Number.isNaN(targetAmount) || targetAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid target amount.');
       return;
     }
@@ -232,7 +232,7 @@ const SavingsGoalsScreen = ({route}: any) => {
       }
 
       const contributionAmount = parseFloat(amount);
-      if (isNaN(contributionAmount) || contributionAmount <= 0) {
+      if (Number.isNaN(contributionAmount) || contributionAmount <= 0) {
         Alert.alert('Error', 'Please enter a valid amount.');
         return;
       }

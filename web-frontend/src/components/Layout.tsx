@@ -1,41 +1,43 @@
 // Enhanced Layout component with modern design
-import React, { useState } from "react";
+
 import {
-  Box,
-  Drawer,
+  AccountBalance as AccountBalanceIcon,
+  ChevronLeft as ChevronLeftIcon,
+  CreditCard as CreditCardIcon,
+  Dashboard as DashboardIcon,
+  Help as HelpIcon,
+  Logout as LogoutIcon,
+  Menu as MenuIcon,
+  Notifications as NotificationsIcon,
+  Payment as PaymentIcon,
+  Person as PersonIcon,
+  Savings as SavingsIcon,
+  Settings as SettingsIcon,
+} from "@mui/icons-material";
+import {
   AppBar,
-  Toolbar,
-  List,
-  Typography,
+  Avatar,
+  Badge,
+  Box,
+  Button,
   Divider,
+  Drawer,
   IconButton,
+  List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Avatar,
   Menu,
   MenuItem,
-  Badge,
-  useTheme,
-  useMediaQuery,
+  Toolbar,
   Tooltip,
-  Button,
+  Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
-import {
-  Menu as MenuIcon,
-  ChevronLeft as ChevronLeftIcon,
-  Dashboard as DashboardIcon,
-  AccountBalance as AccountBalanceIcon,
-  Payment as PaymentIcon,
-  CreditCard as CreditCardIcon,
-  Savings as SavingsIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Notifications as NotificationsIcon,
-  Person as PersonIcon,
-  Help as HelpIcon,
-} from "@mui/icons-material";
-import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
+import type React from "react";
+import { useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const drawerWidth = 260;

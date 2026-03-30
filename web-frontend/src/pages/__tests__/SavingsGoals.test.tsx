@@ -1,5 +1,5 @@
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Assuming the component exists in the original project at:
@@ -88,7 +88,7 @@ describe("SavingsGoals Page", () => {
     render(<SavingsGoals />);
 
     // Find the 'Add $50' button for the second goal (New Car)
-    const carGoalDiv = screen.getByText("New Car Down Payment").closest("div");
+    const _carGoalDiv = screen.getByText("New Car Down Payment").closest("div");
     const addButton = screen.getAllByRole("button", { name: /Add \$50/i })[1]; // Assuming order is stable
 
     expect(screen.getByText(/Current: \$1,500/)).toBeInTheDocument(); // Initial amount

@@ -1,18 +1,22 @@
-import React, {useState, useEffect} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  type RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import {useEffect, useState} from 'react';
+import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import {commonStyles, colors, responsiveWidth} from '../styles/commonStyles';
-import {getAccountDetails} from '../services/api';
-import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
-import {RootStackParamList} from '../navigation/AppNavigator';
 import {useAuth} from '../context/AuthContext';
+import type {RootStackParamList} from '../navigation/AppNavigator';
+import {getAccountDetails} from '../services/api';
+import {colors, commonStyles} from '../styles/commonStyles';
 
 // Define the route prop type for this screen
 type AccountDetailsScreenRouteProp = RouteProp<

@@ -1,17 +1,17 @@
-import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
-import {commonStyles, colors, responsiveWidth} from '../styles/commonStyles';
-import {getAccountTransactions} from '../services/api';
-import {useAuth} from '../context/AuthContext';
 import {useNavigation} from '@react-navigation/native';
+import {useEffect, useState} from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {useAuth} from '../context/AuthContext';
+import {getAccountTransactions} from '../services/api';
+import {colors, commonStyles} from '../styles/commonStyles';
 
 // Define the structure for transaction data
 interface Transaction {
@@ -89,7 +89,7 @@ const TransactionsScreen = ({route}: any) => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [accountId, filter]);
+  }, [fetchTransactions]);
 
   const onRefresh = () => {
     setRefreshing(true);
