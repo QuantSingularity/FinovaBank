@@ -197,3 +197,9 @@ Desktop.ini
 *.pyc
 *.whl
 *.egg
+
+# Type checker cache
+.mypy_cache/
+
+# Ruff cache
+.ruff_cache/
