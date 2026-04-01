@@ -1,0 +1,19 @@
+-- FinovaBank Database Initialization Script
+-- Creates separate schemas for each microservice
+
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS accounts;
+CREATE SCHEMA IF NOT EXISTS transactions;
+CREATE SCHEMA IF NOT EXISTS loans;
+CREATE SCHEMA IF NOT EXISTS savings;
+CREATE SCHEMA IF NOT EXISTS reporting;
+CREATE SCHEMA IF NOT EXISTS notifications;
+
+-- Grant permissions
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA accounts TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA transactions TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA loans TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA savings TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA reporting TO finova_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA notifications TO finova_user;

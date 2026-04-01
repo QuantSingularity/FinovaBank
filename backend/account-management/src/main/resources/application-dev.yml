@@ -1,39 +1,33 @@
+---
 server:
   port: 8003
 
 spring:
   application:
     name: account-management-service
-  profiles:
-    active: dev
+
   datasource:
     url: jdbc:h2:mem:accountdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
-        use_sql_comments: true
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: account-service-group
-      auto-offset-reset: earliest
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
 
 eureka:
   client:
@@ -43,26 +37,12 @@ eureka:
   instance:
     prefer-ip-address: true
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
-jwt:
-  secret: ${JWT_SECRET:devSecretKeyForLocalDevelopmentOnly1234567890}
-  expiration-time: 3600000
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-account-secret-key-minimum-64-bytes-long-for-hs512-please-change}
 
 logging:
   level:
-    com.finova.account: DEBUG
-    org.springframework.web: INFO
+    com.finova: DEBUG
+    org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

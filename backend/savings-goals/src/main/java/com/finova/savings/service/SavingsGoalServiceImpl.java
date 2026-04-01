@@ -1,29 +1,36 @@
-package com.finova.savings.service.impl;
+package com.finova.savings.service;
 
 import com.finova.savings.model.SavingsGoal;
 import com.finova.savings.repository.SavingsGoalRepository;
-import com.finova.savings.service.SavingsGoalService;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
 public class SavingsGoalServiceImpl implements SavingsGoalService {
 
-  @Autowired private SavingsGoalRepository savingsGoalRepository;
+  private final SavingsGoalRepository savingsGoalRepository;
 
   @Override
+  @Transactional(readOnly = true)
   public SavingsGoal getSavingsGoalById(Long id) {
     return savingsGoalRepository.findById(id).orElse(null);
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<SavingsGoal> getAllSavingsGoals() {
     return savingsGoalRepository.findAll();
   }
 
   @Override
   public SavingsGoal createSavingsGoal(SavingsGoal savingsGoal) {
+    log.info("Creating savings goal for customer: {}", savingsGoal.getCustomerId());
     return savingsGoalRepository.save(savingsGoal);
   }
 
@@ -34,6 +41,16 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
       existingGoal.setGoalName(savingsGoal.getGoalName());
       existingGoal.setTargetAmount(savingsGoal.getTargetAmount());
       existingGoal.setCurrentAmount(savingsGoal.getCurrentAmount());
+      if (savingsGoal.getTargetDate() != null) {
+        existingGoal.setTargetDate(savingsGoal.getTargetDate());
+      }
+      if (savingsGoal.getStatus() != null) {
+        existingGoal.setStatus(savingsGoal.getStatus());
+      }
+      if (savingsGoal.getDescription() != null) {
+        existingGoal.setDescription(savingsGoal.getDescription());
+      }
+      log.info("Updated savings goal with ID: {}", id);
       return savingsGoalRepository.save(existingGoal);
     }
     return null;
@@ -42,5 +59,6 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
   @Override
   public void deleteSavingsGoal(Long id) {
     savingsGoalRepository.deleteById(id);
+    log.info("Deleted savings goal with ID: {}", id);
   }
 }

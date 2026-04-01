@@ -4,6 +4,7 @@ import com.finova.savings.model.SavingsGoal;
 import java.util.List;
 
 public interface SavingsGoalService {
+
   SavingsGoal getSavingsGoalById(Long id);
 
   List<SavingsGoal> getAllSavingsGoals();

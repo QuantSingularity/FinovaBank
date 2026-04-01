@@ -1,11 +1,17 @@
-# Use a lightweight base image with OpenJDK
-FROM openjdk:11
+FROM eclipse-temurin:17-jdk-alpine AS builder
+WORKDIR /app
+COPY target/notification-service-1.0.0.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
 
-# Add the built JAR file from the host into the Docker image
-ADD target/notification-service-1.0.0.jar ./notification-service.jar
-
-# Expose the Eureka Server port (default: 8001)
-EXPOSE 8005
-
-# Define the entrypoint to run the Eureka Server
-ENTRYPOINT ["java", "-jar", "notification-service.jar"]
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+COPY --from=builder /app/dependencies/ ./
+COPY --from=builder /app/spring-boot-loader/ ./
+COPY --from=builder /app/snapshot-dependencies/ ./
+COPY --from=builder /app/application/ ./
+EXPOSE 8006
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:8006/actuator/health || exit 1
+ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]

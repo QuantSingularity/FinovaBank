@@ -17,6 +17,12 @@
     <artifactId>notification-service</artifactId>
 
     <dependencies>
+        <!-- Spring Boot Starter Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -63,19 +69,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- MySQL Connector (if needed for persistence) -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-            <scope>runtime</scope>
-        </dependency>
-
         <!-- PostgreSQL Database (if needed for persistence) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.3.8</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 

@@ -1,5 +1,4 @@
 ---
-# Development Profile for Auth Service
 server:
   port: 8011
 
@@ -7,7 +6,6 @@ spring:
   application:
     name: auth-service
 
-  # H2 Database for local development
   datasource:
     url: jdbc:h2:mem:finovabank_auth;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -31,7 +29,6 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
 
-  # Embedded Redis or skip for dev (optional)
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
@@ -43,18 +40,33 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8001/eureka/}
     fetch-registry: true
     register-with-eureka: true
-    enabled: ${EUREKA_ENABLED:false} # Disable for standalone dev
+    enabled: ${EUREKA_ENABLED:false}
   instance:
     prefer-ip-address: true
 
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:dev-secret-key-change-in-production-min-256-bits}
-  expiration: 3600000 # 1 hour
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-key-for-local-development-only-minimum-64-bytes-long-please-change}
+    access-token-expiration: 3600
+    refresh-token-expiration: 86400
 
-# Logging
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
 logging:
   level:
     com.finova: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

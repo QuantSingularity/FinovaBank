@@ -1,12 +1,10 @@
+---
 server:
-  port: 8014
+  port: 8005
 
 spring:
-  application:
-    name: loan-management
-
   datasource:
-    url: jdbc:h2:mem:loan_db
+    url: jdbc:h2:mem:loan-managementdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -17,34 +15,18 @@ spring:
       path: /h2-console
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
     show-sql: true
     properties:
       hibernate:
-        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
 
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8001/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    prefer-ip-address: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
+    enabled: ${EUREKA_ENABLED:false}
 
 logging:
   level:
-    com.finova.loan: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    com.finova: DEBUG
+    org.hibernate.SQL: DEBUG

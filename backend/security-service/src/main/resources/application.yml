@@ -1,18 +1,22 @@
+---
 server:
-  port: 8009
+  port: 8008
 
 spring:
   application:
     name: security-service
+
   datasource:
-    url: jdbc:h2:mem:securitydb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${DB_URL:jdbc:h2:mem:securitydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
+
   h2:
     console:
       enabled: true
@@ -30,11 +34,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
 
 logging:
   level:
-    com.finova.security: INFO
+    com.finova: INFO

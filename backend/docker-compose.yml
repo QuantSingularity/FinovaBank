@@ -1,0 +1,510 @@
+version: "3.9"
+
+networks:
+  finova-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+
+services:
+  # ─── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: finova-postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-finova_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-finova_password}
+      POSTGRES_DB: ${DB_NAME:-finovabank}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-finova_user} -d ${DB_NAME:-finovabank}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: finova-redis
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - finova-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: finova-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - finova-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: finova-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:29092",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Service Discovery ───────────────────────────────────────────────────────
+
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: finova-eureka
+    environment:
+      EUREKA_HOSTNAME: eureka-server
+      EUREKA_USERNAME: ${EUREKA_USERNAME:-eureka-user}
+      EUREKA_PASSWORD: ${EUREKA_PASSWORD:-eureka-password}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8001:8001"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8001/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # ─── API Gateway ─────────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: finova-api-gateway
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-minimum-64-bytes-long-secret-key}
+      JWT_EXPIRATION_TIME: ${JWT_EXPIRATION:-3600000}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8002:8002"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8002/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # ─── Auth Service ─────────────────────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: finova-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-minimum-64-bytes-long-secret-key}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8011:8011"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8011/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Account Management ───────────────────────────────────────────────────────
+
+  account-management:
+    build:
+      context: ./account-management
+      dockerfile: Dockerfile
+    container_name: finova-account
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-minimum-64-bytes-long-secret-key}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8003:8003"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8003/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Transaction Service ─────────────────────────────────────────────────────
+
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    container_name: finova-transaction
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8004:8004"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8004/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Loan Management ─────────────────────────────────────────────────────────
+
+  loan-management:
+    build:
+      context: ./loan-management
+      dockerfile: Dockerfile
+    container_name: finova-loan
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8005:8005"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8005/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Notification Service ─────────────────────────────────────────────────────
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: finova-notification
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-your_email@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-your_email_password}
+      MAIL_FROM: ${MAIL_FROM:-noreply@finovabank.com}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8006:8006"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8006/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # ─── Reporting Service ────────────────────────────────────────────────────────
+
+  reporting:
+    build:
+      context: ./reporting
+      dockerfile: Dockerfile
+    container_name: finova-reporting
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8007:8007"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8007/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Savings Goals Service ────────────────────────────────────────────────────
+
+  savings-goals:
+    build:
+      context: ./savings-goals
+      dockerfile: Dockerfile
+    container_name: finova-savings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8009:8009"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8009/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── Security Service ─────────────────────────────────────────────────────────
+
+  security-service:
+    build:
+      context: ./security-service
+      dockerfile: Dockerfile
+    container_name: finova-security
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-finovabank}
+      DB_DRIVER: org.postgresql.Driver
+      DB_USERNAME: ${DB_USERNAME:-finova_user}
+      DB_PASSWORD: ${DB_PASSWORD:-finova_password}
+      EUREKA_URL: http://eureka-server:8001/eureka/
+      EUREKA_ENABLED: "true"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+    ports:
+      - "8008:8008"
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8008/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+
+  # ─── AI Service (Python/Flask) ────────────────────────────────────────────────
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: finova-ai
+    environment:
+      SECRET_KEY: ${AI_SECRET_KEY:-change-me-ai-service-secret}
+      DATABASE_URL: sqlite:////app/src/database/app.db
+      FLASK_DEBUG: "false"
+      PORT: "8012"
+      CORS_ORIGINS: "*"
+    ports:
+      - "8012:8012"
+    volumes:
+      - ./ai-service/src/database:/app/src/database
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8012/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ─── Compliance Service (Python/Flask) ───────────────────────────────────────
+
+  compliance-service:
+    build:
+      context: ./compliance-service
+      dockerfile: Dockerfile
+    container_name: finova-compliance
+    environment:
+      SECRET_KEY: ${COMPLIANCE_SECRET_KEY:-change-me-compliance-service-secret}
+      DATABASE_URL: sqlite:////app/src/database/app.db
+      FLASK_DEBUG: "false"
+      PORT: "8013"
+      CORS_ORIGINS: "*"
+    ports:
+      - "8013:8013"
+    volumes:
+      - ./compliance-service/src/database:/app/src/database
+    networks:
+      - finova-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8013/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

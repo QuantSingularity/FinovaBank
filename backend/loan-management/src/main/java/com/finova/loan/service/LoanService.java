@@ -4,6 +4,7 @@ import com.finova.loan.model.Loan;
 import java.util.List;
 
 public interface LoanService {
+
   Loan getLoanById(Long id);
 
   List<Loan> getAllLoans();

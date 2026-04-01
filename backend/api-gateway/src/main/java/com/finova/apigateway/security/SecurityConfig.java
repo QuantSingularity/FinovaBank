@@ -16,18 +16,25 @@ public class SecurityConfig {
   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
     http.csrf()
         .disable()
+        .httpBasic()
+        .disable()
+        .formLogin()
+        .disable()
         .authorizeExchange(
             exchanges ->
                 exchanges
-                    .pathMatchers("/", "/login", "/register", "/actuator/**")
+                    .pathMatchers(
+                        "/",
+                        "/actuator/**",
+                        "/api/auth/login",
+                        "/api/auth/register",
+                        "/api/auth/validate",
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/webjars/**")
                     .permitAll()
                     .anyExchange()
-                    .authenticated() // Require authentication for other endpoints
-            )
-        .httpBasic()
-        .and()
-        .formLogin()
-        .disable();
+                    .permitAll());
     return http.build();
   }
 }

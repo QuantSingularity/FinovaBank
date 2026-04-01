@@ -2,28 +2,36 @@ package com.finova.reporting.service;
 
 import com.finova.reporting.model.Report;
 import com.finova.reporting.repository.ReportRepository;
-import com.finova.reporting.service.ReportService;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
 public class ReportServiceImpl implements ReportService {
 
-  @Autowired private ReportRepository reportRepository;
+  private final ReportRepository reportRepository;
 
   @Override
+  @Transactional(readOnly = true)
   public Report getReportById(Long id) {
     return reportRepository.findById(id).orElse(null);
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<Report> getAllReports() {
     return reportRepository.findAll();
   }
 
   @Override
   public Report createReport(Report report) {
+    log.info("Creating report of type: {}", report.getReportType());
+    report.setStatus(Report.ReportStatus.COMPLETED);
     return reportRepository.save(report);
   }
 }
