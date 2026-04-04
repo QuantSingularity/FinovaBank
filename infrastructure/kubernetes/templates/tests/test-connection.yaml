@@ -2,17 +2,28 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "test-connection"
+  name: '{{ include "finovabank.fullname" . }}-test-connection'
   labels:
-    app: finovabank-test-connection
+    app.kubernetes.io/name: '{{ include "finovabank.name" . }}'
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  restartPolicy: Never
   containers:
     - name: wget
-      image: busybox
+      image: busybox:1.36
       command:
-        [
-          "sh",
-          "-c",
-          'wget -q --spider http://frontend && echo "Connection successful"',
-        ]
-  restartPolicy: Never
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Testing API Gateway..."
+          wget -q --spider --timeout=10 http://{{ include "finovabank.fullname" . }}-api-gateway:8002/actuator/health
+          echo "API Gateway OK"
+          echo "Testing Frontend..."
+          wget -q --spider --timeout=10 http://{{ include "finovabank.fullname" . }}-finovabank-frontend:80/
+          echo "Frontend OK"
+          echo "All connection tests passed."

@@ -3,7 +3,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kibana
+  namespace: monitoring
+  labels:
+    app: kibana
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: kibana
@@ -14,9 +18,53 @@ spec:
     spec:
       containers:
         - name: kibana
-          image: docker.elastic.co/kibana/kibana:7.10.1
+          image: docker.elastic.co/kibana/kibana:8.12.0
           env:
             - name: ELASTICSEARCH_HOSTS
               value: "http://elasticsearch:9200"
+            - name: ELASTICSEARCH_USERNAME
+              value: "kibana_system"
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-credentials
+                  key: kibana-password
+            - name: SERVER_PUBLICBASEURL
+              value: "https://kibana.finovabank.internal"
           ports:
             - containerPort: 5601
+              name: http
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: monitoring
+spec:
+  selector:
+    app: kibana
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+  type: ClusterIP

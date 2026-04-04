@@ -1,3 +1,4 @@
 app:
-  jwtSecret: ${JWT_SECRET_FROM_VAULT} # This must be replaced by a secure value from Vault
-  jwtExpirationInMs: 86400000 # 24 hours
+  jwtSecret: ${JWT_SECRET}
+  jwtExpirationInMs: ${JWT_EXPIRATION_MS:86400000}
+  jwtRefreshExpirationMs: ${JWT_REFRESH_EXPIRATION_MS:604800000}

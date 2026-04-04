@@ -1,9 +1,10 @@
----
 vault:
-  uri: http://localhost:8200
-  token: s.1234567890abcdef
+  uri: ${VAULT_URI:https://vault.finovabank.com:8200}
+  authentication: KUBERNETES
+  kubernetes:
+    role: finovabank-app
   secrets:
-    db-username: postgres
-    db-password: password
-    mongo-username: root
-    mongo-password: example
+    db-username: ${VAULT_SECRET_DB_USERNAME}
+    db-password: ${VAULT_SECRET_DB_PASSWORD}
+    mongo-username: ${VAULT_SECRET_MONGO_USERNAME}
+    mongo-password: ${VAULT_SECRET_MONGO_PASSWORD}

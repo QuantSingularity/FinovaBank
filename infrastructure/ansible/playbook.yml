@@ -28,12 +28,12 @@
     audit_rules_file: /etc/audit/rules.d/finovabank.rules
 
     # Docker configuration
-    docker_compose_version: "2.20.2"
+    docker_compose_version: "2.24.5"
+    docker_compose_plugin_url: "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64"
 
     # Services to install
     required_packages:
       - docker.io
-      - docker-compose
       - fail2ban
       - aide
       - rkhunter
@@ -127,6 +127,12 @@
     # ========================================
     # SYSTEM PREPARATION AND HARDENING
     # ========================================
+
+    - name: Create application group
+      group:
+        name: "{{ app_group }}"
+        system: yes
+      tags: [users, security]
 
     - name: Create application user
       user:

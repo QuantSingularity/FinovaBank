@@ -1,5 +1,21 @@
----
 spring:
   data:
     mongodb:
-      uri: mongodb://quantsingularity:quantsingularity@localhost:27018/accountdb
+      uri: mongodb://${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}:${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}@account-mongodb:27017/accountdb?authSource=admin
+      auto-index-creation: false
+---
+spring:
+  config:
+    activate:
+      on-profile: transaction
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@transaction-mongodb:27017/transactiondb?authSource=admin
+---
+spring:
+  config:
+    activate:
+      on-profile: loan
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@loan-mongodb:27017/loandb?authSource=admin

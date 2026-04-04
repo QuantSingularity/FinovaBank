@@ -1,0 +1,48 @@
+# FinovaBank Local Development Overrides
+# Automatically applied on top of docker-compose.yml when running locally.
+# Do NOT commit this file's secrets to version control.
+
+version: "3.8"
+
+services:
+  api-gateway:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+      LOGGING_LEVEL_COM_FINOVA: DEBUG
+
+  account-management:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+      LOGGING_LEVEL_COM_FINOVA: DEBUG
+
+  transaction-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  loan-management:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  savings-goals:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  risk-assessment:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  compliance:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  notification-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  reporting:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,debug
+
+  vault:
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token

@@ -1,13 +1,23 @@
 replicaCount: 1
+
 image:
   repository: quantsingularity/finovabackend
-  tag: "latest"
   pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
 service:
   type: ClusterIP
-  port: 8002 # Default port, overridden by service-specific port
+  port: 8080
+
 environment:
   API_BASE_URL: "http://api-gateway:8002"
+  springProfile: "production"
+  extra: {}
+
 resources:
   limits:
     cpu: 500m
@@ -16,15 +26,23 @@ resources:
     cpu: 200m
     memory: 256Mi
 
-# Services configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: api.finovabank.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: finovabank-tls
+      hosts:
+        - api.finovabank.com
+
 services:
-  account-management:
-    enabled: true
-    port: 8095
-    replicaCount: 2
-    tag: "account-management-latest" # Assuming service-specific tags exist
-    probes:
-      enabled: true
   api-gateway:
     enabled: true
     port: 8002
@@ -32,64 +50,19 @@ services:
     tag: "api-gateway-latest"
     probes:
       enabled: true
-  compliance:
+      path: "/actuator/health"
+      port: 8002
+
+  account-management:
     enabled: true
-    port: 8097
+    port: 8095
     replicaCount: 2
-    tag: "compliance-latest"
+    tag: "account-management-latest"
     probes:
       enabled: true
-  eureka-server:
-    enabled: true
-    port: 8761
-    replicaCount: 1
-    tag: "eureka-server-latest"
-    probes:
-      enabled: false # Eureka server might not have /actuator/health or should be treated differently
-  finovabank-frontend:
-    enabled: true
-    port: 80
-    replicaCount: 3
-    tag: "finovabank-frontend-latest"
-    probes:
-      enabled: true
-      path: "/" # Frontend health check
-      port: 80
-  loan-management:
-    enabled: true
-    port: 8096
-    replicaCount: 2
-    tag: "loan-management-latest"
-    probes:
-      enabled: true
-  notification-service:
-    enabled: true
-    port: 8098
-    replicaCount: 2
-    tag: "notification-service-latest"
-    probes:
-      enabled: true
-  reporting:
-    enabled: true
-    port: 8099
-    replicaCount: 2
-    tag: "reporting-latest"
-    probes:
-      enabled: true
-  risk-assessment:
-    enabled: true
-    port: 8100
-    replicaCount: 2
-    tag: "risk-assessment-latest"
-    probes:
-      enabled: true
-  savings-goals:
-    enabled: true
-    port: 8101
-    replicaCount: 2
-    tag: "savings-goals-latest"
-    probes:
-      enabled: true
+      path: "/actuator/health"
+      port: 8095
+
   transaction-service:
     enabled: true
     port: 8102
@@ -97,3 +70,92 @@ services:
     tag: "transaction-service-latest"
     probes:
       enabled: true
+      path: "/actuator/health"
+      port: 8102
+
+  loan-management:
+    enabled: true
+    port: 8096
+    replicaCount: 2
+    tag: "loan-management-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8096
+
+  savings-goals:
+    enabled: true
+    port: 8101
+    replicaCount: 2
+    tag: "savings-goals-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8101
+
+  risk-assessment:
+    enabled: true
+    port: 8100
+    replicaCount: 2
+    tag: "risk-assessment-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8100
+
+  compliance:
+    enabled: true
+    port: 8097
+    replicaCount: 2
+    tag: "compliance-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8097
+
+  notification-service:
+    enabled: true
+    port: 8098
+    replicaCount: 2
+    tag: "notification-service-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8098
+
+  reporting:
+    enabled: true
+    port: 8099
+    replicaCount: 2
+    tag: "reporting-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8099
+
+  eureka-server:
+    enabled: true
+    port: 8761
+    replicaCount: 1
+    tag: "eureka-server-latest"
+    probes:
+      enabled: true
+      path: "/actuator/health"
+      port: 8761
+
+  finovabank-frontend:
+    enabled: true
+    port: 80
+    replicaCount: 3
+    tag: "finovabank-frontend-latest"
+    probes:
+      enabled: true
+      path: "/"
+      port: 80
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80

@@ -1,33 +1,106 @@
----
 account:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5433/accountdb
+      url: jdbc:postgresql://account-db:5432/accountdb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/account
+
 transaction:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5434/transactiondb
+      url: jdbc:postgresql://transaction-db:5432/transactiondb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/transaction
+
 loan:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5435/loandb
+      url: jdbc:postgresql://loan-db:5432/loandb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/loan
+
 savings:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5436/savingsdb
+      url: jdbc:postgresql://savings-goals-db:5432/savingsdb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/savings
+
 risk:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5437/riskdb
+      url: jdbc:postgresql://risk-assessment-db:5432/riskdb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/risk
+
 compliance:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5438/compliancedb
+      url: jdbc:postgresql://compliance-db:5432/compliancedb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/compliance
+
 notification:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5439/notificationdb
+      url: jdbc:postgresql://notification-db:5432/notificationdb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/notification
+
 reporting:
   spring:
     datasource:
-      url: jdbc:postgresql://localhost:5440/reportingdb
+      url: jdbc:postgresql://reporting-db:5432/reportingdb
+      username: ${DB_USER:?DB_USER is required}
+      password: ${DB_PASSWORD:?DB_PASSWORD is required}
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+    flyway:
+      enabled: true
+      locations: classpath:db/migration/reporting

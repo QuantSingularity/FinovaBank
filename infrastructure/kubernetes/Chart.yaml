@@ -1,5 +1,13 @@
----
-apiVersion: v1
+apiVersion: v2
 name: finovabank
 version: 1.0.0
-description: Helm chart for deploying the FinovaBank application
+appVersion: "1.0.0"
+description: Helm chart for deploying the FinovaBank microservices application
+type: application
+keywords:
+  - banking
+  - fintech
+  - microservices
+maintainers:
+  - name: FinovaBank Infrastructure Team
+    email: infrastructure@finovabank.com

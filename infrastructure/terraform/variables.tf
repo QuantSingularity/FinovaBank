@@ -496,3 +496,158 @@ variable "enable_vpc_flow_logs" {
   type        = bool
   default     = true
 }
+
+# Domain and SSL Configuration
+variable "domain_name" {
+  description = "Primary domain name for the FinovaBank application"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9\\-\\.]+\\.[a-z]{2,}$", var.domain_name))
+    error_message = "domain_name must be a valid domain (e.g., finovabank.com)."
+  }
+}
+
+# Key Pair
+variable "key_pair_name" {
+  description = "Name of the EC2 key pair for SSH access to instances"
+  type        = string
+}
+
+# Database Replica
+variable "db_replica_instance_class" {
+  description = "Instance class for the RDS read replica"
+  type        = string
+  default     = "db.t3.small"
+}
+
+# Monitoring
+variable "enable_detailed_monitoring" {
+  description = "Enable detailed CloudWatch monitoring for EC2 instances"
+  type        = bool
+  default     = true
+}
+
+variable "enable_enhanced_monitoring" {
+  description = "Enable enhanced monitoring for RDS instances"
+  type        = bool
+  default     = true
+}
+
+variable "cloudwatch_log_retention_days" {
+  description = "Number of days to retain CloudWatch logs"
+  type        = number
+  default     = 2557
+
+  validation {
+    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653], var.cloudwatch_log_retention_days)
+    error_message = "cloudwatch_log_retention_days must be a valid CloudWatch retention period value."
+  }
+}
+
+# Security Feature Flags
+variable "enable_deletion_protection" {
+  description = "Enable deletion protection on RDS and ALB resources"
+  type        = bool
+  default     = true
+}
+
+variable "enable_waf" {
+  description = "Enable WAF for the Application Load Balancer"
+  type        = bool
+  default     = true
+}
+
+variable "enable_backup" {
+  description = "Enable AWS Backup for data protection"
+  type        = bool
+  default     = true
+}
+
+variable "enable_guardduty" {
+  description = "Enable AWS GuardDuty for threat detection"
+  type        = bool
+  default     = true
+}
+
+variable "enable_security_hub" {
+  description = "Enable AWS Security Hub for security posture management"
+  type        = bool
+  default     = true
+}
+
+variable "enable_cloudtrail" {
+  description = "Enable AWS CloudTrail for API activity logging"
+  type        = bool
+  default     = true
+}
+
+variable "enable_vpc_flow_logs" {
+  description = "Enable VPC Flow Logs for network traffic analysis"
+  type        = bool
+  default     = true
+}
+
+variable "enable_x_ray_tracing" {
+  description = "Enable AWS X-Ray tracing for distributed tracing"
+  type        = bool
+  default     = true
+}
+
+variable "enable_config_rules" {
+  description = "Enable AWS Config rules for compliance monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "enable_performance_insights" {
+  description = "Enable RDS Performance Insights"
+  type        = bool
+  default     = true
+}
+
+variable "performance_insights_retention_period" {
+  description = "Retention period for RDS Performance Insights data (days)"
+  type        = number
+  default     = 7
+}
+
+# Notification
+variable "notification_email" {
+  description = "Email address for infrastructure alerts"
+  type        = string
+  default     = ""
+}
+
+# Cost Management
+variable "cost_center" {
+  description = "Cost center tag for billing allocation"
+  type        = string
+  default     = "IT-Infrastructure"
+}
+
+# Compliance
+variable "compliance_level" {
+  description = "Compliance level designation for tagging"
+  type        = string
+  default     = "financial-grade"
+}
+
+variable "data_classification" {
+  description = "Data classification level for tagging"
+  type        = string
+  default     = "confidential"
+}
+
+variable "regulatory_requirements" {
+  description = "List of regulatory requirements applicable to this deployment"
+  type        = list(string)
+  default     = ["PCI-DSS", "GLBA", "SOX"]
+}
+
+# Bastion
+variable "bastion_instance_type" {
+  description = "EC2 instance type for the bastion host"
+  type        = string
+  default     = "t3.micro"
+}

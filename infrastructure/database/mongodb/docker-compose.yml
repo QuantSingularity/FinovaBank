@@ -1,104 +1,171 @@
 ---
 version: "3.8"
+
 services:
   account-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: account-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27018:27017"
     volumes:
       - account-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   transaction-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: transaction-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27019:27017"
     volumes:
       - transaction-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   loan-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: loan-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27020:27017"
     volumes:
       - loan-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   savings-goals-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: savings-goals-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27021:27017"
     volumes:
       - savings-goals-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   risk-assessment-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: risk-assessment-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27022:27017"
     volumes:
       - risk-assessment-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   compliance-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: compliance-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27023:27017"
     volumes:
       - compliance-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   notification-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: notification-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27024:27017"
     volumes:
       - notification-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   reporting-mongodb:
-    image: mongo:4.4
+    image: mongo:6.0
     container_name: reporting-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: quantsingularity
-      MONGO_INITDB_ROOT_PASSWORD: quantsingularity
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     ports:
       - "27025:27017"
     volumes:
       - reporting-mongo-data:/data/db
     networks:
       - finova-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
 networks:
   finova-network:
+    driver: bridge
+
 volumes:
   account-mongo-data:
   transaction-mongo-data:

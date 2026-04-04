@@ -1,4 +1,5 @@
----
 encryption:
   algorithm: AES
+  mode: GCM
   keysize: 256
+  key: ${ENCRYPTION_KEY}

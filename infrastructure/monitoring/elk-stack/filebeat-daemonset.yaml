@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: filebeat
-  namespace: default
+  namespace: monitoring
   labels:
     app: filebeat
 spec:
@@ -15,17 +15,40 @@ spec:
       labels:
         app: filebeat
     spec:
+      serviceAccountName: filebeat
+      terminationGracePeriodSeconds: 30
       containers:
         - name: filebeat
-          image: docker.elastic.co/beats/filebeat:7.10.1
+          image: docker.elastic.co/beats/filebeat:8.12.0
+          args: ["-c", "/etc/filebeat.yml", "-e"]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            runAsUser: 0
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+            limits:
+              memory: "200Mi"
+              cpu: "200m"
           volumeMounts:
             - name: config
-              mountPath: /usr/share/filebeat/filebeat.yml
+              mountPath: /etc/filebeat.yml
               subPath: filebeat.yml
+              readOnly: true
             - name: varlog
               mountPath: /var/log
+              readOnly: true
             - name: varlibdockercontainers
               mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -36,3 +59,37 @@ spec:
         - name: varlibdockercontainers
           hostPath:
             path: /var/lib/docker/containers
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "nodes"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat
+subjects:
+  - kind: ServiceAccount
+    name: filebeat
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: filebeat
+  apiGroup: rbac.authorization.k8s.io

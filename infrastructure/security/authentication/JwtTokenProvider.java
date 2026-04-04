@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
@@ -17,17 +18,18 @@ public class JwtTokenProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
-    // The secret key must be loaded securely from a secret management system (e.g., Vault)
-    // For now, a placeholder value is used, but the application must be configured to load it securely.
-    @Value("${app.jwtSecret:placeholder-secret-key-that-must-be-replaced-with-a-secure-one-from-vault}")
+    @Value("${app.jwtSecret}")
     private String jwtSecret;
 
-    @Value("${app.jwtExpirationInMs:86400000}") // 24 hours
-    private int jwtExpirationInMs;
+    @Value("${app.jwtExpirationInMs:86400000}")
+    private long jwtExpirationInMs;
 
     private SecretKey getSigningKey() {
-        // Use a secure key generation method based on the secret string
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 64) {
+            throw new IllegalStateException("JWT secret must be at least 64 bytes (512 bits) for HS512.");
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(Authentication authentication) {
@@ -38,7 +40,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(userPrincipal.getUsername())
-                .issuedAt(new Date())
+                .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();

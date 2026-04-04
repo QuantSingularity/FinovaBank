@@ -1,0 +1,102 @@
+---
+groups:
+  - name: finovabank.services
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="finova-services"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "FinovaBank service {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+          > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High HTTP 5xx error rate on {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.service }}."
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High p95 latency on {{ $labels.service }}"
+          description: "p95 latency is {{ $value }}s on {{ $labels.service }}."
+
+  - name: finovabank.infrastructure
+    rules:
+      - alert: HighCPU
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{image!=""}[1m])) by (instance) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+
+      - alert: HighMemory
+        expr: |
+          sum(container_memory_usage_bytes{image!=""}) by (instance)
+          /
+          sum(container_spec_memory_limit_bytes{image!=""}) by (instance)
+          > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+
+      - alert: JVMHeapPressure
+        expr: |
+          jvm_memory_used_bytes{area="heap"}
+          /
+          jvm_memory_max_bytes{area="heap"}
+          > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JVM heap pressure on {{ $labels.instance }}"
+          description: "Heap usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+
+  - name: finovabank.database
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_pending > 5
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection pool exhausted on {{ $labels.pool }}"
+          description: "{{ $value }} threads waiting for a connection on pool {{ $labels.pool }}."
+
+      - alert: DatabaseSlowQueries
+        expr: rate(spring_data_repository_invocations_seconds_sum[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time exceeds threshold."

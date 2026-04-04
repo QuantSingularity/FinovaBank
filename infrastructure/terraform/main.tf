@@ -15,15 +15,15 @@ terraform {
     }
   }
 
-#  # Backend configuration for state management with encryption
-#  backend "s3" {
-#    bucket         = "finovabank-terraform-state"
-#    key            = "infrastructure/terraform.tfstate"
-#    region         = "us-west-2"
-#    encrypt        = true
-#    dynamodb_table = "terraform-state-lock"
-#    versioning     = true
-#  }
+  # Backend configuration for state management with encryption
+  backend "s3" {
+    bucket         = "finovabank-terraform-state"
+    key            = "infrastructure/terraform.tfstate"
+    region         = "us-west-2"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+    versioning     = true
+  }
 }
 
 # Provider configuration with default tags for compliance
@@ -41,7 +41,7 @@ provider "aws" {
       BackupRequired     = "true"
       MonitoringRequired = "true"
       CreatedBy          = "Terraform"
-      LastModified       = timestamp()
+      LastModified       = "managed-by-terraform"
     }
   }
 }
@@ -364,6 +364,14 @@ resource "aws_security_group" "database_sg" {
     security_groups = [aws_security_group.app_sg.id]
   }
 
+  egress {
+    description = "All outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = {
     Name       = "FinovaBank-DB-SG"
     Purpose    = "Database-Security"
@@ -589,7 +597,7 @@ resource "aws_lb_listener" "finova_https_listener" {
   load_balancer_arn = aws_lb.finova_alb.arn
   port              = "443"
   protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate.finova_cert.arn
 
   default_action {
@@ -800,19 +808,19 @@ resource "aws_autoscaling_group" "finova_app_asg" {
   tag {
     key                 = "Name"
     value               = "FinovaBank-App-ASG"
-    propagate_at_launch = false
+    propagate_at_launch = true
   }
 
   tag {
     key                 = "Purpose"
     value               = "Auto-Scaling-Group"
-    propagate_at_launch = false
+    propagate_at_launch = true
   }
 
   tag {
     key                 = "Compliance"
     value               = "High-Availability"
-    propagate_at_launch = false
+    propagate_at_launch = true
   }
 }
 

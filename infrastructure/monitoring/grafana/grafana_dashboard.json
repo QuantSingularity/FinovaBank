@@ -1,67 +1,137 @@
 {
   "id": null,
-  "title": "Finova Monitoring Dashboard",
-  "tags": [],
+  "uid": "finovabank-main",
+  "title": "FinovaBank Monitoring Dashboard",
+  "tags": ["finovabank", "production"],
   "timezone": "browser",
-  "schemaVersion": 16,
-  "version": 0,
-  "refresh": "5s",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "panels": [
     {
-      "type": "graph",
+      "type": "timeseries",
       "title": "CPU Usage",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{image!=\"\"}[1m])) by (instance)",
-          "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
-      "datasource": "Prometheus",
-      "id": 1
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.7},
+              {"color": "red", "value": 0.9}
+            ]
+          }
+        }
+      }
     },
     {
-      "type": "graph",
+      "type": "timeseries",
       "title": "Memory Usage",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{image!=\"\"}) by (instance)",
-          "interval": "",
           "legendFormat": "{{instance}}",
-          "refId": "B"
+          "refId": "A"
         }
       ],
-      "datasource": "Prometheus",
-      "id": 2
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
     },
     {
-      "type": "graph",
+      "type": "timeseries",
       "title": "HTTP Requests Rate",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
           "expr": "sum(rate(http_requests_total[5m])) by (service)",
-          "interval": "",
           "legendFormat": "{{service}}",
-          "refId": "C"
+          "refId": "A"
         }
       ],
-      "datasource": "Prometheus",
-      "id": 3
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
     },
     {
-      "type": "graph",
-      "title": "Database Connections",
+      "type": "timeseries",
+      "title": "HTTP Error Rate (5xx)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "pg_stat_activity_count",
-          "interval": "",
-          "legendFormat": "PostgreSQL Connections",
-          "refId": "D"
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service)",
+          "legendFormat": "{{service}} errors",
+          "refId": "A"
         }
       ],
-      "datasource": "Prometheus",
-      "id": 4
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.01}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM Heap Usage",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "{{service}} heap used",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Active Services",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "count(up{job=\"finova-services\"} == 1)",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }
