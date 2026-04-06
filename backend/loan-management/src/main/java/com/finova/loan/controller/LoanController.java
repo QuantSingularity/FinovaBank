@@ -50,12 +50,10 @@ public class LoanController {
 
   @PutMapping("/{id}")
   @Operation(summary = "Update a loan")
-  public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @Valid @RequestBody Loan loan) {
+  public ResponseEntity<Loan> updateLoan(
+      @PathVariable Long id, @Valid @RequestBody Loan loan) {
     log.info("Updating loan with ID: {}", id);
     Loan updated = loanService.updateLoan(id, loan);
-    if (updated == null) {
-      return ResponseEntity.notFound().build();
-    }
     return ResponseEntity.ok(updated);
   }
 

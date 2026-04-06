@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -44,28 +45,28 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public LoginResponse login(LoginRequest request) {
+    User user =
+        userRepository
+            .findByUsername(request.getUsername())
+            .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+    if (Boolean.FALSE.equals(user.getAccountNonLocked())) {
+      throw new LockedException("Account is locked due to too many failed login attempts");
+    }
+
+    if (Boolean.FALSE.equals(user.getEnabled())) {
+      throw new BadCredentialsException("Account is disabled");
+    }
+
     try {
-      // Check if account is locked
-      User user =
-          userRepository
-              .findByUsername(request.getUsername())
-              .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
-
-      if (!user.getAccountNonLocked()) {
-        throw new BadCredentialsException("Account is locked");
-      }
-
-      // Authenticate user
       Authentication authentication =
           authenticationManager.authenticate(
               new UsernamePasswordAuthenticationToken(
                   request.getUsername(), request.getPassword()));
 
-      // Reset failed login attempts on successful login
       userRepository.updateFailedLoginAttempts(request.getUsername(), 0);
       userRepository.updateLastLoginTime(request.getUsername(), LocalDateTime.now());
 
-      // Generate tokens
       String accessToken = jwtTokenProvider.generateAccessToken(authentication);
       String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
 
@@ -80,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
               LocalDateTime.now().plusSeconds(jwtTokenProvider.getAccessTokenValidityInSeconds()))
           .username(user.getUsername())
           .roles(roles)
-          .mfaRequired(user.getMfaEnabled())
+          .mfaRequired(Boolean.TRUE.equals(user.getMfaEnabled()))
           .build();
 
     } catch (AuthenticationException e) {
@@ -91,7 +92,6 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public UserResponse register(RegisterRequest request) {
-    // Check if username or email already exists
     if (userRepository.existsByUsername(request.getUsername())) {
       throw new IllegalArgumentException("Username already exists");
     }
@@ -99,13 +99,11 @@ public class AuthServiceImpl implements AuthService {
       throw new IllegalArgumentException("Email already exists");
     }
 
-    // Get default customer role
     Role customerRole =
         roleRepository
             .findByName(Role.RoleName.ROLE_CUSTOMER)
             .orElseThrow(() -> new RuntimeException("Default role not found"));
 
-    // Create new user
     User user =
         User.builder()
             .username(request.getUsername())
@@ -125,22 +123,31 @@ public class AuthServiceImpl implements AuthService {
 
   @Override
   public void logout(String token) {
-    // Add token to blacklist
-    long expiration = jwtTokenProvider.getExpirationFromToken(token).getTime();
-    long currentTime = System.currentTimeMillis();
-    long ttl = expiration - currentTime;
+    if (token == null || token.isBlank()) {
+      return;
+    }
+    try {
+      long expiration = jwtTokenProvider.getExpirationFromToken(token).getTime();
+      long currentTime = System.currentTimeMillis();
+      long ttl = expiration - currentTime;
 
-    if (ttl > 0) {
-      redisTemplate
-          .opsForValue()
-          .set(BLACKLIST_PREFIX + token, "blacklisted", ttl, TimeUnit.MILLISECONDS);
+      if (ttl > 0) {
+        redisTemplate
+            .opsForValue()
+            .set(BLACKLIST_PREFIX + token, "blacklisted", ttl, TimeUnit.MILLISECONDS);
+      }
+    } catch (Exception e) {
+      log.warn("Could not blacklist token: {}", e.getMessage());
     }
   }
 
   @Override
   public LoginResponse refreshToken(String token) {
+    if (token == null || token.isBlank()) {
+      throw new BadCredentialsException("Refresh token is required");
+    }
     if (!jwtTokenProvider.validateToken(token) || isTokenBlacklisted(token)) {
-      throw new BadCredentialsException("Invalid refresh token");
+      throw new BadCredentialsException("Invalid or expired refresh token");
     }
 
     String username = jwtTokenProvider.getUsernameFromToken(token);
@@ -149,7 +156,6 @@ public class AuthServiceImpl implements AuthService {
             .findByUsername(username)
             .orElseThrow(() -> new BadCredentialsException("User not found"));
 
-    // Generate new tokens
     Authentication authentication =
         new UsernamePasswordAuthenticationToken(
             user.getUsername(),
@@ -161,7 +167,6 @@ public class AuthServiceImpl implements AuthService {
     String newAccessToken = jwtTokenProvider.generateAccessToken(authentication);
     String newRefreshToken = jwtTokenProvider.generateRefreshToken(authentication);
 
-    // Blacklist old refresh token
     logout(token);
 
     Set<String> roles =
@@ -175,12 +180,15 @@ public class AuthServiceImpl implements AuthService {
             LocalDateTime.now().plusSeconds(jwtTokenProvider.getAccessTokenValidityInSeconds()))
         .username(user.getUsername())
         .roles(roles)
-        .mfaRequired(user.getMfaEnabled())
+        .mfaRequired(Boolean.TRUE.equals(user.getMfaEnabled()))
         .build();
   }
 
   @Override
   public boolean validateToken(String token) {
+    if (token == null || token.isBlank()) {
+      return false;
+    }
     return jwtTokenProvider.validateToken(token) && !isTokenBlacklisted(token);
   }
 
@@ -198,19 +206,23 @@ public class AuthServiceImpl implements AuthService {
   }
 
   private void handleFailedLogin(String username) {
-    User user = userRepository.findByUsername(username).orElse(null);
-    if (user != null) {
-      int failedAttempts = user.getFailedLoginAttempts() + 1;
+    userRepository.findByUsername(username).ifPresent(user -> {
+      int failedAttempts = (user.getFailedLoginAttempts() != null ? user.getFailedLoginAttempts() : 0) + 1;
       userRepository.updateFailedLoginAttempts(username, failedAttempts);
-
       if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
         lockAccount(username);
+        log.warn("Account locked after {} failed attempts for user: {}", failedAttempts, username);
       }
-    }
+    });
   }
 
   private boolean isTokenBlacklisted(String token) {
-    return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+    try {
+      return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+    } catch (Exception e) {
+      log.warn("Could not check token blacklist: {}", e.getMessage());
+      return false;
+    }
   }
 
   private UserResponse mapToUserResponse(User user) {
@@ -225,10 +237,10 @@ public class AuthServiceImpl implements AuthService {
         .lastName(user.getLastName())
         .phoneNumber(user.getPhoneNumber())
         .roles(roles)
-        .enabled(user.getEnabled())
-        .accountNonExpired(user.getAccountNonExpired())
-        .accountNonLocked(user.getAccountNonLocked())
-        .credentialsNonExpired(user.getCredentialsNonExpired())
+        .enabled(Boolean.TRUE.equals(user.getEnabled()))
+        .accountNonExpired(Boolean.TRUE.equals(user.getAccountNonExpired()))
+        .accountNonLocked(Boolean.TRUE.equals(user.getAccountNonLocked()))
+        .credentialsNonExpired(Boolean.TRUE.equals(user.getCredentialsNonExpired()))
         .createdAt(user.getCreatedAt())
         .lastLoginAt(user.getLastLoginAt())
         .build();

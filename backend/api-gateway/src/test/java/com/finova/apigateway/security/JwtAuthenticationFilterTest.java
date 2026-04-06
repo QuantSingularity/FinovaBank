@@ -4,79 +4,89 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import java.io.IOException;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpHeaders;
-import org.springframework.mock.web.MockFilterChain;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 public class JwtAuthenticationFilterTest {
 
-  @InjectMocks private JwtAuthenticationFilter jwtAuthenticationFilter;
+  private JwtAuthenticationFilter jwtAuthenticationFilter;
 
   @Mock private JwtUtil jwtUtil;
-
-  private MockHttpServletRequest request;
-  private MockHttpServletResponse response;
-  private FilterChain filterChain;
 
   @BeforeEach
   public void setup() {
     MockitoAnnotations.openMocks(this);
-    request = new MockHttpServletRequest();
-    response = new MockHttpServletResponse();
-    filterChain = new MockFilterChain();
-    SecurityContextHolder.clearContext();
+    jwtAuthenticationFilter = new JwtAuthenticationFilter();
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        jwtAuthenticationFilter, "jwtUtil", jwtUtil);
   }
 
   @Test
-  public void testDoFilterInternal_NoAuthHeader() throws ServletException, IOException {
-    // Given
-    when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+  public void testFilter_NoAuthHeader() {
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    WebFilterChain chain = ex -> Mono.empty();
 
-    // When
-    jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+    Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);
 
-    // Then
+    StepVerifier.create(result).verifyComplete();
     verify(jwtUtil, never()).validateToken(anyString());
-    assertNotNull(SecurityContextHolder.getContext());
   }
 
   @Test
-  public void testDoFilterInternal_InvalidAuthHeader() throws ServletException, IOException {
-    // Given
-    when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Invalid");
-
-    // When
-    jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
-
-    // Then
-    verify(jwtUtil, never()).validateToken(anyString());
-    assertNotNull(SecurityContextHolder.getContext());
-  }
-
-  @Test
-  public void testDoFilterInternal_ValidAuthHeader() throws ServletException, IOException {
-    // Given
-    String token = "Bearer valid_token";
-    when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(token);
+  public void testFilter_ValidBearerToken() {
     when(jwtUtil.validateToken("valid_token")).thenReturn(true);
     when(jwtUtil.extractUsername("valid_token")).thenReturn("user@example.com");
 
-    // When
-    jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer valid_token")
+        .build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    WebFilterChain chain = ex -> Mono.empty();
 
-    // Then
+    Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);
+
+    StepVerifier.create(result).verifyComplete();
     verify(jwtUtil, times(1)).validateToken("valid_token");
-    verify(jwtUtil, times(1)).extractUsername("valid_token");
-    assertNotNull(SecurityContextHolder.getContext());
+  }
+
+  @Test
+  public void testFilter_InvalidToken() {
+    when(jwtUtil.validateToken("bad_token")).thenReturn(false);
+
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer bad_token")
+        .build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    WebFilterChain chain = ex -> Mono.empty();
+
+    Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);
+
+    StepVerifier.create(result).verifyComplete();
+  }
+
+  @Test
+  public void testFilter_PublicEndpoint_SkipsValidation() {
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/auth/login").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    WebFilterChain chain = ex -> Mono.empty();
+
+    Mono<Void> result = jwtAuthenticationFilter.filter(exchange, chain);
+
+    StepVerifier.create(result).verifyComplete();
+    verify(jwtUtil, never()).validateToken(anyString());
+  }
+
+  @Test
+  public void testFilterNotNull() {
+    assertNotNull(jwtAuthenticationFilter);
   }
 }

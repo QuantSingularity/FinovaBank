@@ -1,15 +1,17 @@
-package com.finovabank.repositories;
+package com.finova.savings.repository;
 
-// Assuming model exists here, adjust if needed
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
-import com.finova.savings.repository.SavingsGoalRepository; // Corrected import
+import com.finova.savings.model.SavingsGoal;
+import java.math.BigDecimal;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-@DataJpaTest // Use DataJpaTest for repository tests
+@DataJpaTest
 public class SavingsGoalRepositoryTest {
 
   @Autowired private TestEntityManager entityManager;
@@ -18,22 +20,33 @@ public class SavingsGoalRepositoryTest {
 
   @Test
   public void whenFindById_thenReturnSavingsGoal() {
-    // Given
-    // SavingsGoal goal = new SavingsGoal(); // Need actual SavingsGoal model details
-    // goal.setSomeProperty("test"); // Set properties based on SavingsGoal model
-    // entityManager.persist(goal);
-    // entityManager.flush();
+    SavingsGoal goal = new SavingsGoal();
+    goal.setGoalName("Vacation Fund");
+    goal.setTargetAmount(new BigDecimal("5000.00"));
+    goal.setCurrentAmount(new BigDecimal("1000.00"));
+    goal.setCustomerId("customer123");
 
-    // When
-    // SavingsGoal found = savingsGoalRepository.findById(goal.getId()).orElse(null);
+    entityManager.persist(goal);
+    entityManager.flush();
 
-    // Then
-    // assertThat(found).isNotNull();
-    // assertThat(found.getSomeProperty()).isEqualTo(goal.getSomeProperty());
+    Optional<SavingsGoal> found = savingsGoalRepository.findById(goal.getId());
 
-    // Placeholder assertion until SavingsGoal model is known
-    assertThat(savingsGoalRepository).isNotNull();
+    assertThat(found).isPresent();
+    assertEquals("Vacation Fund", found.get().getGoalName());
+    assertEquals(0, new BigDecimal("5000.00").compareTo(found.get().getTargetAmount()));
   }
 
-  // Add more tests for other repository methods (e.g., save, delete, custom queries)
+  @Test
+  public void testSaveSavingsGoal() {
+    SavingsGoal goal = new SavingsGoal();
+    goal.setGoalName("Emergency Fund");
+    goal.setTargetAmount(new BigDecimal("3000.00"));
+    goal.setCustomerId("customer456");
+
+    SavingsGoal saved = savingsGoalRepository.save(goal);
+
+    assertNotNull(saved.getId());
+    assertEquals("Emergency Fund", saved.getGoalName());
+    assertEquals(SavingsGoal.GoalStatus.IN_PROGRESS, saved.getStatus());
+  }
 }

@@ -17,8 +17,13 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(RuntimeException.class)
   public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-    log.error("Runtime exception: {}", ex.getMessage(), ex);
-    return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    String message = ex.getMessage();
+    if (message != null && message.toLowerCase().contains("not found")) {
+      log.warn("Resource not found: {}", message);
+      return buildErrorResponse(HttpStatus.NOT_FOUND, message);
+    }
+    log.error("Runtime exception: {}", message, ex);
+    return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, message);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

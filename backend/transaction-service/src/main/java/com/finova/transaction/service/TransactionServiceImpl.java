@@ -2,6 +2,7 @@ package com.finova.transaction.service;
 
 import com.finova.transaction.model.Transaction;
 import com.finova.transaction.repository.TransactionRepository;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -32,12 +33,31 @@ public class TransactionServiceImpl implements TransactionService {
 
   @Override
   public Transaction createTransaction(Transaction transaction) {
-    if (transaction.getReferenceNumber() == null || transaction.getReferenceNumber().isBlank()) {
-      transaction.setReferenceNumber("TXN-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
+    if (transaction.getAccountId() == null) {
+      throw new IllegalArgumentException("Account ID is required");
     }
+    if (transaction.getAmount() == null || transaction.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new IllegalArgumentException("Transaction amount must be positive");
+    }
+    if (transaction.getType() == null || transaction.getType().isBlank()) {
+      throw new IllegalArgumentException("Transaction type is required");
+    }
+
+    if (transaction.getReferenceNumber() == null || transaction.getReferenceNumber().isBlank()) {
+      transaction.setReferenceNumber(
+          "TXN-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
+    }
+
     transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
     transaction.setProcessedAt(LocalDateTime.now());
-    log.info("Creating transaction with reference: {}", transaction.getReferenceNumber());
+
+    log.info(
+        "Creating transaction: ref={}, accountId={}, type={}, amount={}",
+        transaction.getReferenceNumber(),
+        transaction.getAccountId(),
+        transaction.getType(),
+        transaction.getAmount());
+
     return transactionRepository.save(transaction);
   }
 }

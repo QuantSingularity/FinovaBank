@@ -1,42 +1,96 @@
 package com.finova.account.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import com.finova.account.dto.AccountCreateRequest;
+import com.finova.account.dto.AccountResponse;
+import com.finova.account.model.Account;
+import com.finova.account.repository.AccountRepository;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-// Assuming the service and repository classes exist in the original project at:
-// com.finova.account.service.impl.AccountServiceImpl
-// com.finova.account.repository.AccountRepository
-// Adjust imports if the package structure is different.
-// import com.finova.account.service.impl.AccountServiceImpl;
-// import com.finova.account.repository.AccountRepository;
-// import com.finova.account.model.Account;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 public class AccountServiceTest {
 
-  // @Mock
-  // private AccountRepository accountRepository;
+  @Mock
+  private AccountRepository accountRepository;
 
-  // @InjectMocks
-  // private AccountServiceImpl accountService;
+  @InjectMocks
+  private AccountServiceImpl accountService;
 
   @Test
   public void testGetAccountById() {
-    // Mock repository behavior
-    // Account mockAccount = new Account();
-    // mockAccount.setId(1L);
-    // when(accountRepository.findById(1L)).thenReturn(Optional.of(mockAccount));
+    Account mockAccount = Account.builder()
+        .id(1L)
+        .accountNumber("ACC001")
+        .customerId("customer1")
+        .accountName("Test Account")
+        .accountType(Account.AccountType.CHECKING)
+        .status(Account.AccountStatus.ACTIVE)
+        .balance(new BigDecimal("1000.00"))
+        .availableBalance(new BigDecimal("1000.00"))
+        .currency("USD")
+        .build();
 
-    // Call service method
-    // Account foundAccount = accountService.getAccountById(1L);
+    when(accountRepository.findById(1L)).thenReturn(Optional.of(mockAccount));
 
-    // Assert results
-    // assertNotNull(foundAccount);
-    // assertEquals(1L, foundAccount.getId());
-    // verify(accountRepository, times(1)).findById(1L);
+    AccountResponse result = accountService.getAccountById(1L);
+
+    assertNotNull(result);
+    assertEquals(1L, result.getId());
+    assertEquals("ACC001", result.getAccountNumber());
+    verify(accountRepository, times(1)).findById(1L);
   }
 
-  // Add more test methods for other service operations
-  // e.g., testCreateAccount(), testUpdateAccountBalance(), testDeleteAccount()
+  @Test
+  public void testGetAccountById_NotFound() {
+    when(accountRepository.findById(99L)).thenReturn(Optional.empty());
+
+    assertThrows(RuntimeException.class, () -> accountService.getAccountById(99L));
+    verify(accountRepository, times(1)).findById(99L);
+  }
+
+  @Test
+  public void testCreateAccount() {
+    AccountCreateRequest request = new AccountCreateRequest();
+    request.setCustomerId("customer123");
+    request.setAccountName("My Savings");
+    request.setAccountType(Account.AccountType.SAVINGS);
+    request.setCurrency("USD");
+    request.setInitialDeposit(new BigDecimal("500.00"));
+
+    Account savedAccount = Account.builder()
+        .id(1L)
+        .accountNumber("100012345678")
+        .customerId("customer123")
+        .accountName("My Savings")
+        .accountType(Account.AccountType.SAVINGS)
+        .status(Account.AccountStatus.ACTIVE)
+        .balance(new BigDecimal("500.00"))
+        .availableBalance(new BigDecimal("500.00"))
+        .currency("USD")
+        .build();
+
+    when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
+
+    AccountResponse result = accountService.createAccount(request);
+
+    assertNotNull(result);
+    assertNotNull(result.getId());
+    assertEquals("customer123", result.getCustomerId());
+    assertEquals(Account.AccountStatus.ACTIVE, result.getStatus());
+    verify(accountRepository, times(1)).save(any(Account.class));
+  }
 }

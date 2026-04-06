@@ -1,4 +1,4 @@
-package com.finovabank.controllers;
+package com.finova.savings.controller;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.finova.savings.SavingsGoalsApplication;
-import com.finova.savings.controller.SavingsGoalController;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.finova.savings.SavingsGoalsServiceApplication;
 import com.finova.savings.model.SavingsGoal;
 import com.finova.savings.service.SavingsGoalService;
 import java.math.BigDecimal;
@@ -24,15 +24,18 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SavingsGoalController.class)
-@ContextConfiguration(classes = SavingsGoalsApplication.class)
+@ContextConfiguration(classes = SavingsGoalsServiceApplication.class)
 public class SavingsGoalControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
   @MockBean private SavingsGoalService savingsGoalService;
 
-  // Helper to convert object to JSON string
   private static final ObjectMapper objectMapper = new ObjectMapper();
+
+  static {
+    objectMapper.registerModule(new JavaTimeModule());
+  }
 
   private static String asJsonString(final Object obj) {
     try {
@@ -44,125 +47,122 @@ public class SavingsGoalControllerTest {
 
   @Test
   public void contextLoads() throws Exception {
-    // Basic test to ensure the context loads and controller is wired
     assert (mockMvc != null);
   }
 
   @Test
   public void testGetSavingsGoalById() throws Exception {
-    // Arrange
     SavingsGoal goal = new SavingsGoal();
     goal.setId(1L);
-    goal.setName("Vacation Fund");
-    goal.setTargetAmount(new BigDecimal("2000.0"));
-    goal.setCurrentAmount(new BigDecimal("500.0"));
+    goal.setGoalName("Vacation Fund");
+    goal.setTargetAmount(new BigDecimal("2000.00"));
+    goal.setCurrentAmount(new BigDecimal("500.00"));
+    goal.setCustomerId("customer1");
 
     when(savingsGoalService.getSavingsGoalById(1L)).thenReturn(goal);
 
-    // Act & Assert
     mockMvc
-        .perform(get("/savings/{id}", 1L).contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/savings-goals/{id}", 1L).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id", is(1)))
-        .andExpect(jsonPath("$.name", is("Vacation Fund")))
-        .andExpect(jsonPath("$.targetAmount", is(2000.0)));
+        .andExpect(jsonPath("$.goalName", is("Vacation Fund")))
+        .andExpect(jsonPath("$.targetAmount", is(2000.00)));
 
     verify(savingsGoalService, times(1)).getSavingsGoalById(1L);
   }
 
   @Test
   public void testGetAllSavingsGoals() throws Exception {
-    // Arrange
     SavingsGoal goal1 = new SavingsGoal();
     goal1.setId(1L);
-    goal1.setName("Vacation");
-    goal1.setTargetAmount(new BigDecimal("2000.0"));
+    goal1.setGoalName("Vacation");
+    goal1.setTargetAmount(new BigDecimal("2000.00"));
+    goal1.setCustomerId("customer1");
 
     SavingsGoal goal2 = new SavingsGoal();
     goal2.setId(2L);
-    goal2.setName("New Car");
-    goal2.setTargetAmount(new BigDecimal("10000.0"));
+    goal2.setGoalName("New Car");
+    goal2.setTargetAmount(new BigDecimal("10000.00"));
+    goal2.setCustomerId("customer2");
 
     List<SavingsGoal> goals = Arrays.asList(goal1, goal2);
-
     when(savingsGoalService.getAllSavingsGoals()).thenReturn(goals);
 
-    // Act & Assert
     mockMvc
-        .perform(get("/savings").contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/savings-goals").contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
-        .andExpect(jsonPath("$[0].name", is("Vacation")))
-        .andExpect(jsonPath("$[1].name", is("New Car")));
+        .andExpect(jsonPath("$[0].goalName", is("Vacation")))
+        .andExpect(jsonPath("$[1].goalName", is("New Car")));
 
     verify(savingsGoalService, times(1)).getAllSavingsGoals();
   }
 
   @Test
   public void testCreateSavingsGoal() throws Exception {
-    // Arrange
     SavingsGoal goalToCreate = new SavingsGoal();
-    goalToCreate.setName("Emergency Fund");
-    goalToCreate.setTargetAmount(new BigDecimal("5000.0"));
-    goalToCreate.setCustomerId("123");
+    goalToCreate.setGoalName("Emergency Fund");
+    goalToCreate.setTargetAmount(new BigDecimal("5000.00"));
+    goalToCreate.setCustomerId("customer123");
 
     SavingsGoal createdGoal = new SavingsGoal();
     createdGoal.setId(3L);
-    createdGoal.setName("Emergency Fund");
-    createdGoal.setTargetAmount(new BigDecimal("5000.0"));
-    createdGoal.setCurrentAmount(new BigDecimal("0.0"));
-    createdGoal.setCustomerId("123");
+    createdGoal.setGoalName("Emergency Fund");
+    createdGoal.setTargetAmount(new BigDecimal("5000.00"));
+    createdGoal.setCurrentAmount(new BigDecimal("0.00"));
+    createdGoal.setCustomerId("customer123");
 
     when(savingsGoalService.createSavingsGoal(any(SavingsGoal.class))).thenReturn(createdGoal);
 
-    // Act & Assert
     mockMvc
         .perform(
-            post("/savings")
+            post("/api/savings-goals")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(goalToCreate)))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id", is(3)))
-        .andExpect(jsonPath("$.name", is("Emergency Fund")));
+        .andExpect(jsonPath("$.goalName", is("Emergency Fund")));
 
     verify(savingsGoalService, times(1)).createSavingsGoal(any(SavingsGoal.class));
   }
 
   @Test
   public void testUpdateSavingsGoal() throws Exception {
-    // Arrange
     SavingsGoal goalUpdates = new SavingsGoal();
-    goalUpdates.setCurrentAmount(new BigDecimal("750.0"));
+    goalUpdates.setCurrentAmount(new BigDecimal("750.00"));
+    goalUpdates.setGoalName("Vacation Fund");
+    goalUpdates.setTargetAmount(new BigDecimal("2000.00"));
+    goalUpdates.setCustomerId("customer1");
 
     SavingsGoal updatedGoal = new SavingsGoal();
     updatedGoal.setId(1L);
-    updatedGoal.setName("Vacation Fund");
-    updatedGoal.setTargetAmount(new BigDecimal("2000.0"));
-    updatedGoal.setCurrentAmount(new BigDecimal("750.0"));
+    updatedGoal.setGoalName("Vacation Fund");
+    updatedGoal.setTargetAmount(new BigDecimal("2000.00"));
+    updatedGoal.setCurrentAmount(new BigDecimal("750.00"));
+    updatedGoal.setCustomerId("customer1");
 
     when(savingsGoalService.updateSavingsGoal(eq(1L), any(SavingsGoal.class)))
         .thenReturn(updatedGoal);
 
-    // Act & Assert
     mockMvc
         .perform(
-            put("/savings/{id}", 1L)
+            put("/api/savings-goals/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(goalUpdates)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id", is(1)))
-        .andExpect(jsonPath("$.currentAmount", is(750.0)));
+        .andExpect(jsonPath("$.currentAmount", is(750.00)));
 
     verify(savingsGoalService, times(1)).updateSavingsGoal(eq(1L), any(SavingsGoal.class));
   }
 
   @Test
   public void testDeleteSavingsGoal() throws Exception {
-    // Arrange
     doNothing().when(savingsGoalService).deleteSavingsGoal(1L);
 
-    // Act & Assert
-    mockMvc.perform(delete("/savings/{id}", 1L)).andExpect(status().isOk());
+    mockMvc
+        .perform(delete("/api/savings-goals/{id}", 1L))
+        .andExpect(status().isNoContent());
 
     verify(savingsGoalService, times(1)).deleteSavingsGoal(1L);
   }

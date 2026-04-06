@@ -41,7 +41,8 @@ public class SavingsGoalController {
 
   @PostMapping
   @Operation(summary = "Create a savings goal")
-  public ResponseEntity<SavingsGoal> createSavingsGoal(@Valid @RequestBody SavingsGoal savingsGoal) {
+  public ResponseEntity<SavingsGoal> createSavingsGoal(
+      @Valid @RequestBody SavingsGoal savingsGoal) {
     log.info("Creating savings goal for customer: {}", savingsGoal.getCustomerId());
     SavingsGoal created = savingsGoalService.createSavingsGoal(savingsGoal);
     log.info("Savings goal created with ID: {}", created.getId());
@@ -54,9 +55,6 @@ public class SavingsGoalController {
       @PathVariable Long id, @Valid @RequestBody SavingsGoal savingsGoal) {
     log.info("Updating savings goal with ID: {}", id);
     SavingsGoal updated = savingsGoalService.updateSavingsGoal(id, savingsGoal);
-    if (updated == null) {
-      return ResponseEntity.notFound().build();
-    }
     return ResponseEntity.ok(updated);
   }
 

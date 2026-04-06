@@ -1,4 +1,4 @@
-package com.finovabank.security;
+package com.finova.security;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -6,26 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// Assuming the utility class exists in the original project at:
-// com.finova.security.encryption.EncryptionUtil
-// Adjust the import path if necessary.
-// import com.finova.security.encryption.EncryptionUtil;
-
-// Placeholder for actual EncryptionUtil class
 class MockEncryptionUtil {
-    private static final Logger logger = LoggerFactory.getLogger(exists.class);
-
-  private static final String MOCK_KEY =
-      "mock-secret-key-1234567890123456"; // Example key (use secure generation in real app)
 
   public static String encrypt(String data) {
-    // Replace with actual encryption logic for testing
     if (data == null) return null;
     return new StringBuilder(data).reverse().toString() + "_encrypted";
   }
 
   public static String decrypt(String encryptedData) {
-    // Replace with actual decryption logic for testing
     if (encryptedData == null || !encryptedData.endsWith("_encrypted")) return null;
     String reversedData =
         encryptedData.substring(0, encryptedData.length() - "_encrypted".length());
@@ -35,20 +23,21 @@ class MockEncryptionUtil {
 
 public class EncryptionUtilTest {
 
+  private static final Logger logger = LoggerFactory.getLogger(EncryptionUtilTest.class);
+
   @Test
   public void testEncryptDecryptSuccess() {
     String originalData = "SensitiveInformation123";
-    // Replace MockEncryptionUtil with the actual class
     String encryptedData = MockEncryptionUtil.encrypt(originalData);
 
     assertNotNull(encryptedData);
     assertNotEquals(originalData, encryptedData);
-    logger.info("Encrypted: " + encryptedData);
+    logger.info("Encrypted: {}", encryptedData);
 
     String decryptedData = MockEncryptionUtil.decrypt(encryptedData);
     assertNotNull(decryptedData);
     assertEquals(originalData, decryptedData);
-    logger.info("Decrypted: " + decryptedData);
+    logger.info("Decrypted: {}", decryptedData);
   }
 
   @Test
@@ -68,6 +57,4 @@ public class EncryptionUtilTest {
     String decryptedData = MockEncryptionUtil.decrypt("invalidEncryptedData");
     assertNull(decryptedData);
   }
-
-  // Add more tests for edge cases, different data types, key management if applicable
 }

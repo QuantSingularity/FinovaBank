@@ -34,19 +34,16 @@ public class NotificationControllerTest {
 
   @Test
   public void testSendNotification() throws Exception {
-    // Given
     doNothing().when(notificationService).sendNotification(any(NotificationRequest.class));
 
-    // When & Then
     mockMvc
         .perform(
-            post("/notifications/send")
+            post("/api/notifications/send")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"userId\":\"123\",\"message\":\"Test notification\",\"type\":\"EMAIL\"}"))
+                    "{\"recipientEmail\":\"test@example.com\",\"subject\":\"Test Subject\",\"message\":\"Test notification\"}"))
         .andExpect(status().isOk());
 
-    // Verify
     verify(notificationService).sendNotification(any(NotificationRequest.class));
   }
 }

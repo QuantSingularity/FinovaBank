@@ -27,6 +27,8 @@ public class AccountServiceImpl implements AccountService {
   private final AccountRepository accountRepository;
   private final Random random = new Random();
 
+  private static final int ACCOUNT_NUMBER_MAX_RETRIES = 10;
+
   @Override
   @Transactional(readOnly = true)
   public AccountResponse getAccountById(Long id) {
@@ -83,10 +85,8 @@ public class AccountServiceImpl implements AccountService {
   public AccountResponse createAccount(AccountCreateRequest request) {
     log.info("Creating new account for customer: {}", request.getCustomerId());
 
-    // Generate unique account number
-    String accountNumber = generateAccountNumber();
+    String accountNumber = generateUniqueAccountNumber();
 
-    // Build the account entity
     Account account =
         Account.builder()
             .accountNumber(accountNumber)
@@ -94,18 +94,18 @@ public class AccountServiceImpl implements AccountService {
             .accountName(request.getAccountName())
             .accountType(request.getAccountType())
             .status(Account.AccountStatus.ACTIVE)
-            .balance(request.getInitialDeposit())
-            .availableBalance(request.getInitialDeposit())
-            .overdraftLimit(request.getOverdraftLimit())
-            .minimumBalance(request.getMinimumBalance())
-            .interestRate(request.getInterestRate())
-            .currency(request.getCurrency())
+            .balance(request.getInitialDeposit() != null ? request.getInitialDeposit() : BigDecimal.ZERO)
+            .availableBalance(request.getInitialDeposit() != null ? request.getInitialDeposit() : BigDecimal.ZERO)
+            .overdraftLimit(request.getOverdraftLimit() != null ? request.getOverdraftLimit() : BigDecimal.ZERO)
+            .minimumBalance(request.getMinimumBalance() != null ? request.getMinimumBalance() : BigDecimal.ZERO)
+            .interestRate(request.getInterestRate() != null ? request.getInterestRate() : BigDecimal.ZERO)
+            .currency(request.getCurrency() != null ? request.getCurrency() : "USD")
             .branchCode(request.getBranchCode())
             .routingNumber(request.getRoutingNumber())
             .iban(request.getIban())
             .swiftCode(request.getSwiftCode())
             .isFrozen(false)
-            .createdBy("system") // In production, get from security context
+            .createdBy("system")
             .build();
 
     Account savedAccount = accountRepository.save(account);
@@ -123,7 +123,6 @@ public class AccountServiceImpl implements AccountService {
             .findById(id)
             .orElseThrow(() -> new RuntimeException("Account not found with ID: " + id));
 
-    // Update only provided fields
     if (request.getAccountName() != null) {
       account.setAccountName(request.getAccountName());
     }
@@ -149,7 +148,7 @@ public class AccountServiceImpl implements AccountService {
       account.setSwiftCode(request.getSwiftCode());
     }
 
-    account.setUpdatedBy("system"); // In production, get from security context
+    account.setUpdatedBy("system");
 
     Account updatedAccount = accountRepository.save(account);
     log.info("Account updated successfully: {}", id);
@@ -166,14 +165,17 @@ public class AccountServiceImpl implements AccountService {
             .findById(id)
             .orElseThrow(() -> new RuntimeException("Account not found with ID: " + id));
 
-    // Check if account can be closed
-    if (account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
+    if (account.getBalance() != null && account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
       throw new RuntimeException("Cannot close account with non-zero balance");
+    }
+    if (account.getAvailableBalance() != null
+        && account.getAvailableBalance().compareTo(BigDecimal.ZERO) != 0) {
+      throw new RuntimeException("Cannot close account with non-zero available balance");
     }
 
     account.setStatus(Account.AccountStatus.CLOSED);
     account.setClosedAt(LocalDateTime.now());
-    account.setClosedBy("system"); // In production, get from security context
+    account.setClosedBy("system");
     account.setClosureReason(reason);
 
     accountRepository.save(account);
@@ -215,6 +217,10 @@ public class AccountServiceImpl implements AccountService {
             .findById(id)
             .orElseThrow(() -> new RuntimeException("Account not found with ID: " + id));
 
+    if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new RuntimeException("Transaction amount must be positive");
+    }
+
     BigDecimal amount = request.getAmount();
     String transactionType = request.getTransactionType().toUpperCase();
 
@@ -253,7 +259,7 @@ public class AccountServiceImpl implements AccountService {
             .findById(id)
             .orElseThrow(() -> new RuntimeException("Account not found with ID: " + id));
 
-    account.freeze(reason, "system"); // In production, get from security context
+    account.freeze(reason, "system");
     account.setStatus(Account.AccountStatus.FROZEN);
 
     Account frozenAccount = accountRepository.save(account);
@@ -292,7 +298,6 @@ public class AccountServiceImpl implements AccountService {
     Account.AccountStatus oldStatus = account.getStatus();
     account.setStatus(status);
 
-    // Handle special status transitions
     if (status == Account.AccountStatus.FROZEN) {
       account.freeze(reason, "system");
     } else if (oldStatus == Account.AccountStatus.FROZEN
@@ -304,7 +309,7 @@ public class AccountServiceImpl implements AccountService {
       account.setClosureReason(reason);
     }
 
-    account.setUpdatedBy("system"); // In production, get from security context
+    account.setUpdatedBy("system");
 
     Account updatedAccount = accountRepository.save(account);
     log.info("Account status updated successfully: {}", id);
@@ -338,15 +343,22 @@ public class AccountServiceImpl implements AccountService {
     }
   }
 
-  // Helper methods
+  private String generateUniqueAccountNumber() {
+    for (int i = 0; i < ACCOUNT_NUMBER_MAX_RETRIES; i++) {
+      String accountNumber = generateAccountNumber();
+      if (!accountRepository.findByAccountNumber(accountNumber).isPresent()) {
+        return accountNumber;
+      }
+      log.warn("Account number collision detected, retrying ({}/{})", i + 1, ACCOUNT_NUMBER_MAX_RETRIES);
+    }
+    throw new RuntimeException("Failed to generate unique account number after " + ACCOUNT_NUMBER_MAX_RETRIES + " attempts");
+  }
 
   private String generateAccountNumber() {
-    // Generate a 16-digit account number
-    // Format: BANK_CODE (4 digits) + BRANCH (4 digits) + ACCOUNT (8 digits)
     StringBuilder accountNumber = new StringBuilder();
-    accountNumber.append("1000"); // Bank code
-    accountNumber.append(String.format("%04d", random.nextInt(10000))); // Branch code
-    accountNumber.append(String.format("%08d", random.nextInt(100000000))); // Account number
+    accountNumber.append("1000");
+    accountNumber.append(String.format("%04d", random.nextInt(10000)));
+    accountNumber.append(String.format("%08d", random.nextInt(100000000)));
     return accountNumber.toString();
   }
 

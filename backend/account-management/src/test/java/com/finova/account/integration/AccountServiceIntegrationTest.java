@@ -1,19 +1,30 @@
 package com.finova.account.integration;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
+import com.finova.account.dto.AccountCreateRequest;
+import com.finova.account.dto.AccountResponse;
 import com.finova.account.model.Account;
 import com.finova.account.service.AccountService;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@TestPropertySource(
+    properties = {
+      "eureka.client.enabled=false",
+      "eureka.client.register-with-eureka=false",
+      "eureka.client.fetch-registry=false",
+      "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
+          + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,"
+          + "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
+    })
 public class AccountServiceIntegrationTest {
 
   @LocalServerPort private int port;
@@ -22,25 +33,23 @@ public class AccountServiceIntegrationTest {
 
   @Test
   public void testCreateAndGetAccount() {
-    // Create a test account
-    Account account = new Account();
-    account.setAccountNumber("TEST123456");
-    account.setBalance(new BigDecimal("1000.00"));
-    account.setCustomerId("customer123");
+    AccountCreateRequest request = new AccountCreateRequest();
+    request.setCustomerId("customer123");
+    request.setAccountName("Test Account");
+    request.setAccountType(Account.AccountType.CHECKING);
+    request.setCurrency("USD");
+    request.setInitialDeposit(new BigDecimal("1000.00"));
 
-    Account savedAccount = accountService.createAccount(account);
+    AccountResponse savedAccount = accountService.createAccount(request);
 
-    // Verify the account was created
     assertNotNull(savedAccount.getId());
+    assertNotNull(savedAccount.getAccountNumber());
+    assertEquals("customer123", savedAccount.getCustomerId());
 
-    // Retrieve the account
-    Account retrievedAccount = accountService.getAccountById(savedAccount.getId());
+    AccountResponse retrievedAccount = accountService.getAccountById(savedAccount.getId());
 
-    // Verify retrieved account matches
     assertEquals(savedAccount.getId(), retrievedAccount.getId());
-    assertEquals("TEST123456", retrievedAccount.getAccountNumber());
-    // Use compareTo for BigDecimal to avoid scale issues
-    assertEquals(0, new BigDecimal("1000.00").compareTo(retrievedAccount.getBalance()));
     assertEquals("customer123", retrievedAccount.getCustomerId());
+    assertEquals(0, new BigDecimal("1000.00").compareTo(retrievedAccount.getBalance()));
   }
 }

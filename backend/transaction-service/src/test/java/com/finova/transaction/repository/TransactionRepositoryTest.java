@@ -1,15 +1,17 @@
-package com.finovabank.repositories;
+package com.finova.transaction.repository;
 
-// Assuming model exists here, adjust if needed
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
-import com.finova.transaction.repository.TransactionRepository; // Corrected import
+import com.finova.transaction.model.Transaction;
+import java.math.BigDecimal;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-@DataJpaTest // Use DataJpaTest for repository tests
+@DataJpaTest
 public class TransactionRepositoryTest {
 
   @Autowired private TestEntityManager entityManager;
@@ -18,22 +20,33 @@ public class TransactionRepositoryTest {
 
   @Test
   public void whenFindById_thenReturnTransaction() {
-    // Given
-    // Transaction transaction = new Transaction(); // Need actual Transaction model details
-    // transaction.setSomeProperty("test"); // Set properties based on Transaction model
-    // entityManager.persist(transaction);
-    // entityManager.flush();
+    Transaction transaction = new Transaction();
+    transaction.setAccountId(1L);
+    transaction.setAmount(new BigDecimal("100.00"));
+    transaction.setType("CREDIT");
+    transaction.setReferenceNumber("TXN-TEST-001");
 
-    // When
-    // Transaction found = transactionRepository.findById(transaction.getId()).orElse(null);
+    entityManager.persist(transaction);
+    entityManager.flush();
 
-    // Then
-    // assertThat(found).isNotNull();
-    // assertThat(found.getSomeProperty()).isEqualTo(transaction.getSomeProperty());
+    Optional<Transaction> found = transactionRepository.findById(transaction.getId());
 
-    // Placeholder assertion until Transaction model is known
-    assertThat(transactionRepository).isNotNull();
+    assertThat(found).isPresent();
+    assertEquals(transaction.getReferenceNumber(), found.get().getReferenceNumber());
+    assertEquals(0, new BigDecimal("100.00").compareTo(found.get().getAmount()));
   }
 
-  // Add more tests for other repository methods (e.g., save, delete, findByAccountId)
+  @Test
+  public void testSaveTransaction() {
+    Transaction transaction = new Transaction();
+    transaction.setAccountId(2L);
+    transaction.setAmount(new BigDecimal("250.00"));
+    transaction.setType("DEBIT");
+    transaction.setReferenceNumber("TXN-TEST-002");
+
+    Transaction saved = transactionRepository.save(transaction);
+
+    assertNotNull(saved.getId());
+    assertEquals("TXN-TEST-002", saved.getReferenceNumber());
+  }
 }

@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.finova.loan.LoanManagementApplication;
-import com.finova.loan.controller.LoanController;
 import com.finova.loan.model.Loan;
 import com.finova.loan.service.LoanService;
 import java.math.BigDecimal;
@@ -31,8 +31,11 @@ public class LoanControllerTest {
 
   @MockBean private LoanService loanService;
 
-  // Helper to convert object to JSON string
   private static final ObjectMapper objectMapper = new ObjectMapper();
+
+  static {
+    objectMapper.registerModule(new JavaTimeModule());
+  }
 
   private static String asJsonString(final Object obj) {
     try {
@@ -44,26 +47,24 @@ public class LoanControllerTest {
 
   @Test
   public void contextLoads() throws Exception {
-    // Basic test to ensure the context loads and controller is wired
     assert (mockMvc != null);
   }
 
   @Test
   public void testGetLoanById() throws Exception {
-    // Arrange
     Loan loan = new Loan();
     loan.setId(1L);
-    loan.setAmount(new BigDecimal("5000.0"));
-    loan.setStatus("APPROVED");
+    loan.setAmount(new BigDecimal("5000.00"));
+    loan.setStatus(Loan.LoanStatus.APPROVED);
+    loan.setCustomerId("customer1");
 
     when(loanService.getLoanById(1L)).thenReturn(loan);
 
-    // Act & Assert
     mockMvc
-        .perform(get("/loan/{id}", 1L).contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/loans/{id}", 1L).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id", is(1)))
-        .andExpect(jsonPath("$.amount", is(5000.0)))
+        .andExpect(jsonPath("$.amount", is(5000.00)))
         .andExpect(jsonPath("$.status", is("APPROVED")));
 
     verify(loanService, times(1)).getLoanById(1L);
@@ -71,24 +72,23 @@ public class LoanControllerTest {
 
   @Test
   public void testGetAllLoans() throws Exception {
-    // Arrange
     Loan loan1 = new Loan();
     loan1.setId(1L);
-    loan1.setAmount(new BigDecimal("5000.0"));
-    loan1.setStatus("APPROVED");
+    loan1.setAmount(new BigDecimal("5000.00"));
+    loan1.setStatus(Loan.LoanStatus.APPROVED);
+    loan1.setCustomerId("customer1");
 
     Loan loan2 = new Loan();
     loan2.setId(2L);
-    loan2.setAmount(new BigDecimal("10000.0"));
-    loan2.setStatus("PENDING");
+    loan2.setAmount(new BigDecimal("10000.00"));
+    loan2.setStatus(Loan.LoanStatus.PENDING);
+    loan2.setCustomerId("customer2");
 
     List<Loan> loans = Arrays.asList(loan1, loan2);
-
     when(loanService.getAllLoans()).thenReturn(loans);
 
-    // Act & Assert
     mockMvc
-        .perform(get("/loan").contentType(MediaType.APPLICATION_JSON))
+        .perform(get("/api/loans").contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].status", is("APPROVED")))
@@ -99,26 +99,24 @@ public class LoanControllerTest {
 
   @Test
   public void testCreateLoan() throws Exception {
-    // Arrange
     Loan loanToCreate = new Loan();
-    loanToCreate.setAmount(new BigDecimal("7500.0"));
-    loanToCreate.setCustomerId("123");
+    loanToCreate.setAmount(new BigDecimal("7500.00"));
+    loanToCreate.setCustomerId("customer123");
 
     Loan createdLoan = new Loan();
     createdLoan.setId(3L);
-    createdLoan.setAmount(new BigDecimal("7500.0"));
-    createdLoan.setCustomerId("123");
-    createdLoan.setStatus("PENDING");
+    createdLoan.setAmount(new BigDecimal("7500.00"));
+    createdLoan.setCustomerId("customer123");
+    createdLoan.setStatus(Loan.LoanStatus.PENDING);
 
     when(loanService.createLoan(any(Loan.class))).thenReturn(createdLoan);
 
-    // Act & Assert
     mockMvc
         .perform(
-            post("/loan")
+            post("/api/loans")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(loanToCreate)))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id", is(3)))
         .andExpect(jsonPath("$.status", is("PENDING")));
 
@@ -127,21 +125,22 @@ public class LoanControllerTest {
 
   @Test
   public void testUpdateLoan() throws Exception {
-    // Arrange
     Loan loanUpdates = new Loan();
-    loanUpdates.setStatus("REJECTED");
+    loanUpdates.setStatus(Loan.LoanStatus.REJECTED);
+    loanUpdates.setCustomerId("customer1");
+    loanUpdates.setAmount(new BigDecimal("5000.00"));
 
     Loan updatedLoan = new Loan();
     updatedLoan.setId(1L);
-    updatedLoan.setAmount(new BigDecimal("5000.0"));
-    updatedLoan.setStatus("REJECTED");
+    updatedLoan.setAmount(new BigDecimal("5000.00"));
+    updatedLoan.setStatus(Loan.LoanStatus.REJECTED);
+    updatedLoan.setCustomerId("customer1");
 
     when(loanService.updateLoan(eq(1L), any(Loan.class))).thenReturn(updatedLoan);
 
-    // Act & Assert
     mockMvc
         .perform(
-            put("/loan/{id}", 1L)
+            put("/api/loans/{id}", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(asJsonString(loanUpdates)))
         .andExpect(status().isOk())
@@ -153,11 +152,11 @@ public class LoanControllerTest {
 
   @Test
   public void testDeleteLoan() throws Exception {
-    // Arrange
     doNothing().when(loanService).deleteLoan(1L);
 
-    // Act & Assert
-    mockMvc.perform(delete("/loan/{id}", 1L)).andExpect(status().isOk());
+    mockMvc
+        .perform(delete("/api/loans/{id}", 1L))
+        .andExpect(status().isNoContent());
 
     verify(loanService, times(1)).deleteLoan(1L);
   }
