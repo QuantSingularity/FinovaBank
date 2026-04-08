@@ -40,7 +40,6 @@ public class TransactionController {
   }
 
   @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "Create a new transaction")
   public ResponseEntity<Transaction> createTransaction(@Valid @RequestBody Transaction transaction) {
     log.info("Creating transaction for account: {}", transaction.getAccountId());

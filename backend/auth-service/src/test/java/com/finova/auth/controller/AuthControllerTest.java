@@ -11,7 +11,9 @@ import com.finova.auth.dto.LoginRequest;
 import com.finova.auth.dto.LoginResponse;
 import com.finova.auth.dto.RegisterRequest;
 import com.finova.auth.dto.UserResponse;
+import com.finova.auth.repository.RoleRepository;
 import com.finova.auth.repository.UserRepository;
+import com.finova.auth.security.CustomUserDetailsService;
 import com.finova.auth.service.AuthService;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -32,6 +34,10 @@ public class AuthControllerTest {
   @MockBean private AuthService authService;
 
   @MockBean private UserRepository userRepository;
+
+  @MockBean private RoleRepository roleRepository;
+
+  @MockBean private CustomUserDetailsService customUserDetailsService;
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 

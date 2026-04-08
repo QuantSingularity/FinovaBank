@@ -14,4 +14,4 @@ eureka:
     fetch-registry: false
 
 jwt:
-  secret: testSecretKeyForApiGatewayJwtTokenValidation1234567890abcdefghij
+  secret: testSecretKeyForApiGatewayJwtTokenValidation1234567890abcdefghijklmnop

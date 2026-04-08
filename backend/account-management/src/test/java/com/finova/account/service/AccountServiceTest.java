@@ -2,6 +2,7 @@ package com.finova.account.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.finova.account.dto.AccountCreateRequest;
@@ -9,17 +10,12 @@ import com.finova.account.dto.AccountResponse;
 import com.finova.account.model.Account;
 import com.finova.account.repository.AccountRepository;
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 public class AccountServiceTest {
@@ -83,6 +79,7 @@ public class AccountServiceTest {
         .currency("USD")
         .build();
 
+    when(accountRepository.findByAccountNumber(any(String.class))).thenReturn(Optional.empty());
     when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
     AccountResponse result = accountService.createAccount(request);

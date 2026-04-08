@@ -3,40 +3,58 @@ package com.finova.apigateway.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
-import java.io.IOException;
-import javax.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.core.AuthenticationException;
+import reactor.test.StepVerifier;
 
 public class JwtAuthenticationEntryPointTest {
 
   @InjectMocks private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-  private MockHttpServletRequest request;
-  private MockHttpServletResponse response;
-  private AuthenticationException authException;
-
   @BeforeEach
   public void setup() {
     MockitoAnnotations.openMocks(this);
-    request = new MockHttpServletRequest();
-    response = new MockHttpServletResponse();
-    authException = mock(AuthenticationException.class);
   }
 
   @Test
-  public void testCommence() throws IOException, ServletException {
-    // When
-    jwtAuthenticationEntryPoint.commence(request, response, authException);
+  public void testCommence() {
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    AuthenticationException authException = mock(AuthenticationException.class);
 
-    // Then
-    assertEquals(HttpStatus.UNAUTHORIZED.value(), response.getStatus());
-    assertEquals("application/json", response.getContentType());
+    StepVerifier.create(jwtAuthenticationEntryPoint.commence(exchange, authException))
+        .verifyComplete();
+
+    assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    assertEquals(MediaType.APPLICATION_JSON, exchange.getResponse().getHeaders().getContentType());
+  }
+
+  @Test
+  public void testCommenceReturns401() {
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/secure").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    AuthenticationException authException = mock(AuthenticationException.class);
+
+    jwtAuthenticationEntryPoint.commence(exchange, authException).block();
+
+    assertEquals(HttpStatus.UNAUTHORIZED.value(), exchange.getResponse().getStatusCode().value());
+  }
+
+  @Test
+  public void testCommenceSetsJsonContentType() {
+    MockServerHttpRequest request = MockServerHttpRequest.get("/api/data").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    AuthenticationException authException = mock(AuthenticationException.class);
+
+    jwtAuthenticationEntryPoint.commence(exchange, authException).block();
+
+    assertEquals(MediaType.APPLICATION_JSON, exchange.getResponse().getHeaders().getContentType());
   }
 }

@@ -7,9 +7,9 @@ import com.finova.account.dto.BalanceUpdateRequest;
 import com.finova.account.model.Account;
 import com.finova.account.repository.AccountRepository;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountServiceImpl implements AccountService {
 
   private final AccountRepository accountRepository;
-  private final Random random = new Random();
+  private final SecureRandom secureRandom = new SecureRandom();
 
   private static final int ACCOUNT_NUMBER_MAX_RETRIES = 10;
 
@@ -357,8 +357,8 @@ public class AccountServiceImpl implements AccountService {
   private String generateAccountNumber() {
     StringBuilder accountNumber = new StringBuilder();
     accountNumber.append("1000");
-    accountNumber.append(String.format("%04d", random.nextInt(10000)));
-    accountNumber.append(String.format("%08d", random.nextInt(100000000)));
+    accountNumber.append(String.format("%06d", secureRandom.nextInt(1000000)));
+    accountNumber.append(String.format("%06d", secureRandom.nextInt(1000000)));
     return accountNumber.toString();
   }
 

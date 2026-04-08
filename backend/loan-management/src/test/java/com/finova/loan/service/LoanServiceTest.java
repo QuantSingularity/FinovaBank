@@ -91,10 +91,12 @@ public class LoanServiceTest {
 
   @Test
   public void testDeleteLoan() {
+    when(loanRepository.existsById(1L)).thenReturn(true);
     doNothing().when(loanRepository).deleteById(1L);
 
     loanService.deleteLoan(1L);
 
+    verify(loanRepository, times(1)).existsById(1L);
     verify(loanRepository, times(1)).deleteById(1L);
   }
 }

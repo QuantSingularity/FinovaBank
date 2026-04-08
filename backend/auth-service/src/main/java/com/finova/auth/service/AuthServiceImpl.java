@@ -30,7 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(noRollbackFor = {
+    BadCredentialsException.class,
+    LockedException.class,
+    IllegalArgumentException.class
+})
 public class AuthServiceImpl implements AuthService {
 
   private final UserRepository userRepository;

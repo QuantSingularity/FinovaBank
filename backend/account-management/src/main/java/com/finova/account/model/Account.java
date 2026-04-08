@@ -199,7 +199,7 @@ public class Account {
 
   // Business methods
   public boolean canDebit(BigDecimal amount) {
-    if (isFrozen || status != AccountStatus.ACTIVE) {
+    if (Boolean.TRUE.equals(isFrozen) || status != AccountStatus.ACTIVE) {
       return false;
     }
     BigDecimal totalAvailable = availableBalance.add(overdraftLimit);
@@ -207,7 +207,8 @@ public class Account {
   }
 
   public boolean canCredit() {
-    return !isFrozen && (status == AccountStatus.ACTIVE || status == AccountStatus.DORMANT);
+    return !Boolean.TRUE.equals(isFrozen)
+        && (status == AccountStatus.ACTIVE || status == AccountStatus.DORMANT);
   }
 
   public void freeze(String reason, String frozenBy) {

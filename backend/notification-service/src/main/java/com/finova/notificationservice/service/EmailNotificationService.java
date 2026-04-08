@@ -5,6 +5,7 @@ import javax.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -13,6 +14,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 @Service
+@ConditionalOnBean(JavaMailSender.class)
 @RequiredArgsConstructor
 @Slf4j
 public class EmailNotificationService implements NotificationService {
@@ -42,7 +44,17 @@ public class EmailNotificationService implements NotificationService {
       if (notificationRequest.getProperties() != null) {
         context.setVariables(notificationRequest.getProperties());
       }
-      String htmlContent = templateEngine.process("email-template", context);
+
+      String htmlContent;
+      try {
+        htmlContent = templateEngine.process("email-template", context);
+      } catch (Exception e) {
+        log.warn("Could not process email template, falling back to plain message: {}", e.getMessage());
+        htmlContent = notificationRequest.getMessage() != null
+            ? "<html><body>" + notificationRequest.getMessage() + "</body></html>"
+            : "<html><body>Notification from FinovaBank</body></html>";
+      }
+
       helper.setText(htmlContent, true);
 
       mailSender.send(message);

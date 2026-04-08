@@ -52,6 +52,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Spring Security Test -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Lombok (Optional) -->
         <dependency>
             <groupId>org.projectlombok</groupId>

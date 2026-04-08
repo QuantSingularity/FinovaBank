@@ -91,10 +91,12 @@ public class SavingsGoalServiceTest {
 
   @Test
   public void testDeleteSavingsGoal() {
+    when(savingsGoalRepository.existsById(1L)).thenReturn(true);
     doNothing().when(savingsGoalRepository).deleteById(1L);
 
     savingsGoalService.deleteSavingsGoal(1L);
 
+    verify(savingsGoalRepository, times(1)).existsById(1L);
     verify(savingsGoalRepository, times(1)).deleteById(1L);
   }
 }
