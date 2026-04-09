@@ -183,11 +183,11 @@ ehthumbs.db
 Desktop.ini
 
 # Compiled/Build files
-/build/
-/dist/
+build/
+dist/
 /out/
-/target/
-/bin/
+target/
+bin/
 /obj/
 *.o
 *.a
