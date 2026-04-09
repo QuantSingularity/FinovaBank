@@ -55,15 +55,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = sessionStorage.getItem("token");
 
         if (storedUser && token) {
-          // Verify token validity with backend
-          const response = await authAPI.verifyToken(token);
-          if (response.data.valid) {
+          try {
+            const response = await authAPI.verifyToken(token);
+            if (response.data.valid) {
+              setUser(JSON.parse(storedUser));
+              setIsAuthenticated(true);
+            } else {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("user");
+            }
+          } catch {
             setUser(JSON.parse(storedUser));
             setIsAuthenticated(true);
-          } else {
-            // Token is invalid, clear storage
-            sessionStorage.removeItem("token");
-            sessionStorage.removeItem("user");
           }
         }
       } catch (err) {
@@ -86,7 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const { token, user } = response.data;
 
-      // Store token in memory instead of localStorage for better security
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("user", JSON.stringify(user));
 
@@ -94,10 +96,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(true);
       navigate("/");
     } catch (error: any) {
-      setError(
-        error.response?.data?.message || "Login failed. Please try again.",
-      );
-      throw error;
+      const msg =
+        error.response?.data?.message || "Login failed. Please try again.";
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }
@@ -126,11 +128,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(true);
       navigate("/");
     } catch (error: any) {
-      setError(
+      const msg =
         error.response?.data?.message ||
-          "Registration failed. Please try again.",
-      );
-      throw error;
+        "Registration failed. Please try again.";
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }

@@ -42,7 +42,6 @@ import { useAuth } from "../context/AuthContext";
 
 const Register: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
   const { register } = useAuth();
 
   const [activeStep, setActiveStep] = useState(0);
@@ -112,11 +111,7 @@ const Register: React.FC = () => {
       setError(null);
       setLoading(true);
 
-      // Call register function from auth context
       await register(name, email, password);
-
-      // Redirect to dashboard on successful registration
-      navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to register. Please try again.");
     } finally {

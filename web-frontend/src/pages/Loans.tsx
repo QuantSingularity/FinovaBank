@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -40,43 +41,19 @@ const Loans: React.FC = () => {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
-  const [loans, setLoans] = useState([
-    {
-      id: 1001,
-      loanAmount: 10000.0,
-      loanType: "PERSONAL",
-      interestRate: 5.25,
-      durationInMonths: 24,
-      monthlyPayment: 438.71,
-      remainingAmount: 8500.5,
-      status: "APPROVED",
-      approvalDate: "2025-01-15",
-      nextPaymentDate: "2025-05-15",
-    },
-    {
-      id: 1002,
-      loanAmount: 5000.0,
-      loanType: "EDUCATION",
-      interestRate: 4.5,
-      durationInMonths: 12,
-      monthlyPayment: 428.04,
-      remainingAmount: 2140.2,
-      status: "APPROVED",
-      approvalDate: "2024-10-05",
-      nextPaymentDate: "2025-05-05",
-    },
-  ]);
+  const [loans, setLoans] = useState<any[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLoans = async () => {
       try {
         setLoading(true);
+        setFetchError(null);
         const response = await loanAPI.getLoans();
-        if (response.data && response.data.length > 0) {
-          setLoans(response.data);
-        }
+        setLoans(response.data || []);
       } catch (error) {
         console.error("Error fetching loans:", error);
+        setFetchError("Failed to load loans. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -85,12 +62,15 @@ const Loans: React.FC = () => {
     fetchLoans();
   }, []);
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleOpenDialog = () => {
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setSubmitError(null);
     formik.resetForm();
   };
 
@@ -104,6 +84,7 @@ const Loans: React.FC = () => {
     onSubmit: async (values) => {
       try {
         setLoading(true);
+        setSubmitError(null);
         const response = await loanAPI.applyForLoan({
           loanAmount: values.loanAmount,
           loanType: values.loanType,
@@ -112,29 +93,14 @@ const Loans: React.FC = () => {
 
         if (response.data) {
           setLoans([...loans, response.data]);
-        } else {
-          // If API doesn't return the new loan, create a mock one
-          const newLoan = {
-            id: Math.floor(1000 + Math.random() * 9000),
-            loanAmount: values.loanAmount,
-            loanType: values.loanType,
-            interestRate: values.loanType === "PERSONAL" ? 5.25 : 4.5,
-            durationInMonths: values.durationInMonths,
-            monthlyPayment:
-              (values.loanAmount / values.durationInMonths) *
-              (1 + (values.loanType === "PERSONAL" ? 0.0525 : 0.045) / 12),
-            remainingAmount: values.loanAmount,
-            status: "PENDING",
-            approvalDate: "",
-            nextPaymentDate: "",
-          };
-
-          setLoans([...loans, newLoan]);
         }
 
         handleCloseDialog();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error applying for loan:", error);
+        setSubmitError(
+          error.response?.data?.message || "Failed to submit loan application.",
+        );
       } finally {
         setLoading(false);
       }
@@ -232,6 +198,12 @@ const Loans: React.FC = () => {
           Apply for New Loan
         </Button>
       </Box>
+
+      {fetchError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {fetchError}
+        </Alert>
+      )}
 
       {loans.length > 0 ? (
         <Box
@@ -360,7 +332,15 @@ const Loans: React.FC = () => {
                   <Box
                     sx={{ gridColumn: { xs: "1", sm: "1 / span 2" }, mt: 1 }}
                   >
-                    <Button variant="outlined" fullWidth>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={() =>
+                        alert(
+                          `Loan #${loan.id} - ${loan.loanType} loan for $${loan.loanAmount.toLocaleString()}`,
+                        )
+                      }
+                    >
                       View Details
                     </Button>
                   </Box>
@@ -400,6 +380,11 @@ const Loans: React.FC = () => {
         </DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
+            {submitError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {submitError}
+              </Alert>
+            )}
             <Box sx={{ display: "grid", gap: 2 }}>
               <TextField
                 fullWidth

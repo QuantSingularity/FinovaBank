@@ -1,11 +1,6 @@
-// Modern Login page with enhanced UI
-
 import {
-  Apple as AppleIcon,
   Devices as DevicesIcon,
   Email as EmailIcon,
-  Facebook as FacebookIcon,
-  Google as GoogleIcon,
   Lock as LockIcon,
   TrendingUp as TrendingUpIcon,
   Visibility as VisibilityIcon,
@@ -15,9 +10,7 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   Divider,
-  FormControlLabel,
   IconButton,
   InputAdornment,
   Link,
@@ -28,19 +21,17 @@ import {
 } from "@mui/material";
 import type React from "react";
 import { useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import GridCompatibility from "../components/GridCompatibility";
 import { useAuth } from "../context/AuthContext";
 
 const Login: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
   const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,12 +46,7 @@ const Login: React.FC = () => {
     try {
       setError(null);
       setLoading(true);
-
-      // Call login function from auth context
       await login(email, password);
-
-      // Redirect to dashboard on successful login
-      navigate("/dashboard");
     } catch (err: any) {
       setError(
         err.message || "Failed to login. Please check your credentials.",
@@ -134,6 +120,9 @@ const Login: React.FC = () => {
               margin="normal"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              autoComplete="email"
+              inputProps={{ "aria-label": "Email Address" }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -151,6 +140,8 @@ const Login: React.FC = () => {
               margin="normal"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              inputProps={{ "aria-label": "Password" }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -162,6 +153,9 @@ const Login: React.FC = () => {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? (
                         <VisibilityOffIcon />
@@ -177,24 +171,11 @@ const Login: React.FC = () => {
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                justifyContent: "flex-end",
                 mt: 1,
                 mb: 3,
               }}
             >
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={<Typography variant="body2">Remember me</Typography>}
-              />
-
               <Link
                 component={RouterLink}
                 to="/forgot-password"
@@ -263,8 +244,8 @@ const Login: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={<GoogleIcon />}
                   sx={{ py: 1.5 }}
+                  onClick={() => setError("Social login is not yet available.")}
                 >
                   Google
                 </Button>
@@ -273,8 +254,8 @@ const Login: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={<FacebookIcon />}
                   sx={{ py: 1.5 }}
+                  onClick={() => setError("Social login is not yet available.")}
                 >
                   Facebook
                 </Button>
@@ -283,8 +264,8 @@ const Login: React.FC = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={<AppleIcon />}
                   sx={{ py: 1.5 }}
+                  onClick={() => setError("Social login is not yet available.")}
                 >
                   Apple
                 </Button>
@@ -293,7 +274,7 @@ const Login: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Right Side - Image and Info */}
+        {/* Right Side - Info Panel */}
         <Box
           sx={{
             flex: 1,

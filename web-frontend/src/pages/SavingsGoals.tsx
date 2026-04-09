@@ -5,6 +5,7 @@ import {
   Savings as SavingsIcon,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -43,48 +44,21 @@ const validationSchema = yup.object({
 const SavingsGoals: React.FC = () => {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
-  const [savingsGoals, setSavingsGoals] = useState([
-    {
-      id: 1,
-      goalName: "Vacation Fund",
-      targetAmount: 5000.0,
-      currentAmount: 2500.0,
-      targetDate: "2025-12-31",
-      createdDate: "2025-01-15",
-      progress: 50,
-    },
-    {
-      id: 2,
-      goalName: "Emergency Fund",
-      targetAmount: 10000.0,
-      currentAmount: 8000.0,
-      targetDate: "2025-08-30",
-      createdDate: "2024-10-05",
-      progress: 80,
-    },
-    {
-      id: 3,
-      goalName: "New Laptop",
-      targetAmount: 2000.0,
-      currentAmount: 500.0,
-      targetDate: "2025-06-15",
-      createdDate: "2025-03-01",
-      progress: 25,
-    },
-  ]);
+  const [savingsGoals, setSavingsGoals] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchSavingsGoals = async () => {
       try {
         setLoading(true);
+        setFetchError(null);
         const response = await savingsAPI.getSavingsGoals();
-        if (response.data && response.data.length > 0) {
-          setSavingsGoals(response.data);
-        }
+        setSavingsGoals(response.data || []);
       } catch (error) {
         console.error("Error fetching savings goals:", error);
+        setFetchError("Failed to load savings goals. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -196,27 +170,35 @@ const SavingsGoals: React.FC = () => {
 
   const handleContribute = async (goalId: number, amount: number) => {
     try {
-      // In a real app, this would call an API endpoint to contribute to the goal
+      const goal = savingsGoals.find((g) => g.id === goalId);
+      if (!goal) return;
+      const newCurrentAmount = Math.min(
+        goal.currentAmount + amount,
+        goal.targetAmount,
+      );
+      await savingsAPI.updateSavingsGoal(goalId, {
+        goalName: goal.goalName,
+        targetAmount: goal.targetAmount,
+        targetDate: goal.targetDate,
+      });
       setSavingsGoals(
-        savingsGoals.map((goal) => {
-          if (goal.id === goalId) {
-            const newCurrentAmount = goal.currentAmount + amount;
-            const newProgress = Math.min(
-              100,
-              Math.round((newCurrentAmount / goal.targetAmount) * 100),
-            );
-
-            return {
-              ...goal,
-              currentAmount: newCurrentAmount,
-              progress: newProgress,
-            };
-          }
-          return goal;
-        }),
+        savingsGoals.map((g) =>
+          g.id === goalId ? { ...g, currentAmount: newCurrentAmount } : g,
+        ),
       );
     } catch (error) {
       console.error("Error contributing to goal:", error);
+      setSavingsGoals(
+        savingsGoals.map((g) => {
+          if (g.id === goalId) {
+            return {
+              ...g,
+              currentAmount: Math.min(g.currentAmount + amount, g.targetAmount),
+            };
+          }
+          return g;
+        }),
+      );
     }
   };
 
@@ -257,6 +239,12 @@ const SavingsGoals: React.FC = () => {
           Create New Goal
         </Button>
       </Box>
+
+      {fetchError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {fetchError}
+        </Alert>
+      )}
 
       {savingsGoals.length > 0 ? (
         <Box
@@ -314,12 +302,20 @@ const SavingsGoals: React.FC = () => {
                       Progress
                     </Typography>
                     <Typography variant="body2" fontWeight="medium">
-                      {goal.progress}%
+                      {Math.round(
+                        (goal.currentAmount / goal.targetAmount) * 100,
+                      )}
+                      %
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={goal.progress}
+                    value={Math.min(
+                      100,
+                      Math.round(
+                        (goal.currentAmount / goal.targetAmount) * 100,
+                      ),
+                    )}
                     sx={{
                       height: 8,
                       borderRadius: 4,
@@ -327,7 +323,9 @@ const SavingsGoals: React.FC = () => {
                       "& .MuiLinearProgress-bar": {
                         borderRadius: 4,
                         bgcolor:
-                          goal.progress === 100
+                          Math.round(
+                            (goal.currentAmount / goal.targetAmount) * 100,
+                          ) >= 100
                             ? theme.palette.success.main
                             : theme.palette.primary.main,
                       },
@@ -369,7 +367,9 @@ const SavingsGoals: React.FC = () => {
                       Created Date
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
-                      {goal.createdDate}
+                      {goal.createdAt
+                        ? new Date(goal.createdAt).toLocaleDateString()
+                        : "-"}
                     </Typography>
                   </Box>
                   <Box>
@@ -387,7 +387,7 @@ const SavingsGoals: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     onClick={() => handleContribute(goal.id, 100)}
-                    disabled={goal.progress === 100}
+                    disabled={goal.currentAmount >= goal.targetAmount}
                   >
                     Add $100
                   </Button>
@@ -395,7 +395,7 @@ const SavingsGoals: React.FC = () => {
                     variant="contained"
                     fullWidth
                     onClick={() => handleContribute(goal.id, 500)}
-                    disabled={goal.progress === 100}
+                    disabled={goal.currentAmount >= goal.targetAmount}
                   >
                     Add $500
                   </Button>

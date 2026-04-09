@@ -1,146 +1,120 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import Register from "../Register";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/pages/Register.tsx
-// Adjust the import path if necessary.
-// import Register from '../../../../FinovaBank/web-frontend/src/pages/Register';
+const mockRegister = jest.fn();
 
-// Placeholder component for testing structure
-const Register: React.FC = () => {
-  const [username, setUsername] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
+jest.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({
+    register: mockRegister,
+    loading: false,
+    error: null,
+  }),
+}));
 
-  const handleRegister = () => {
-    if (password !== confirmPassword) {
-      console.error("Passwords do not match");
-      return;
-    }
-    console.log("Registering user:", username, email);
-    // Mock registration logic
-  };
-
-  return (
-    <div>
-      <h2>Register</h2>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        aria-label="Username"
-      />
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        aria-label="Email"
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        aria-label="Password"
-      />
-      <input
-        type="password"
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        aria-label="Confirm Password"
-      />
-      <button onClick={handleRegister}>Register</button>
-    </div>
+const renderRegister = () =>
+  render(
+    <BrowserRouter>
+      <Register />
+    </BrowserRouter>,
   );
-};
 
 describe("Register Page", () => {
-  test("renders registration form elements", () => {
-    render(<Register />);
-    expect(screen.getByLabelText("Username")).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /register/i }),
-    ).toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  test("allows user to input registration details", () => {
-    render(<Register />);
-    fireEvent.change(screen.getByLabelText("Username"), {
-      target: { value: "newuser" },
-    });
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "newuser@example.com" },
-    });
-    fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "newpass123" },
-    });
-    fireEvent.change(screen.getByLabelText("Confirm Password"), {
-      target: { value: "newpass123" },
-    });
-
-    expect(screen.getByLabelText("Username")).toHaveValue("newuser");
-    expect(screen.getByLabelText("Email")).toHaveValue("newuser@example.com");
-    expect(screen.getByLabelText("Password")).toHaveValue("newpass123");
-    expect(screen.getByLabelText("Confirm Password")).toHaveValue("newpass123");
+  test("renders the first step (Personal Information) by default", () => {
+    renderRegister();
+    expect(screen.getByText(/Personal Information/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Phone/i)).toBeInTheDocument();
   });
 
-  test("calls register handler on button click if passwords match", () => {
-    const consoleSpyLog = jest.spyOn(console, "log");
-    const consoleSpyError = jest.spyOn(console, "error");
-    render(<Register />);
-
-    fireEvent.change(screen.getByLabelText("Username"), {
-      target: { value: "newuser" },
-    });
-    fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "newuser@example.com" },
-    });
-    fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "newpass123" },
-    });
-    fireEvent.change(screen.getByLabelText("Confirm Password"), {
-      target: { value: "newpass123" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /register/i }));
-
-    expect(consoleSpyLog).toHaveBeenCalledWith(
-      "Registering user:",
-      "newuser",
-      "newuser@example.com",
-    );
-    expect(consoleSpyError).not.toHaveBeenCalled();
-
-    consoleSpyLog.mockRestore();
-    consoleSpyError.mockRestore();
+  test("renders the FinovaBank brand name", () => {
+    renderRegister();
+    expect(screen.getByText("FinovaBank")).toBeInTheDocument();
   });
 
-  test("shows error if passwords do not match on register click", () => {
-    const consoleSpyLog = jest.spyOn(console, "log");
-    const consoleSpyError = jest.spyOn(console, "error");
-    render(<Register />);
-
-    fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "newpass123" },
+  test("shows error when next is clicked with empty fields", async () => {
+    renderRegister();
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Please fill in all required fields/i),
+      ).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByLabelText("Confirm Password"), {
-      target: { value: "mismatch" },
+  });
+
+  test("shows error for invalid email format", async () => {
+    renderRegister();
+    fireEvent.change(screen.getByLabelText(/Full Name/i), {
+      target: { value: "John Doe" },
     });
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: "invalidemail" },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "1234567890" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Please enter a valid email address/i),
+      ).toBeInTheDocument();
+    });
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: /register/i }));
+  test("advances to step 2 with valid personal info", async () => {
+    renderRegister();
+    fireEvent.change(screen.getByLabelText(/Full Name/i), {
+      target: { value: "John Doe" },
+    });
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: "john@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "1234567890" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Account Security/i)).toBeInTheDocument();
+    });
+  });
 
-    expect(consoleSpyError).toHaveBeenCalledWith("Passwords do not match");
-    expect(consoleSpyLog).not.toHaveBeenCalled();
+  test("shows error when passwords do not match on step 2", async () => {
+    renderRegister();
+    // Fill step 1
+    fireEvent.change(screen.getByLabelText(/Full Name/i), {
+      target: { value: "John Doe" },
+    });
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: "john@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "1234567890" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    // Fill step 2
+    await waitFor(() => screen.getByLabelText(/^Password$/i));
+    fireEvent.change(screen.getByLabelText(/^Password$/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.change(screen.getByLabelText(/Confirm Password/i), {
+      target: { value: "different" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
+    });
+  });
 
-    consoleSpyLog.mockRestore();
-    consoleSpyError.mockRestore();
+  test("has link to login page", () => {
+    renderRegister();
+    const signInLink = screen.getByRole("link", { name: /Sign In/i });
+    expect(signInLink).toBeInTheDocument();
+    expect(signInLink).toHaveAttribute("href", "/login");
   });
 });

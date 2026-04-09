@@ -1,35 +1,124 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import Dashboard from "../Dashboard";
 
-// Corrected import path based on project structure
-import Dashboard from "../../../../../finovabank_project/web-frontend/src/pages/Dashboard";
+jest.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({
+    user: {
+      id: 1,
+      name: "Test User",
+      email: "test@example.com",
+      role: "USER",
+      createdAt: "",
+    },
+    isAuthenticated: true,
+    loading: false,
+  }),
+}));
 
-// Mock necessary context or props if the component requires them
-// Example: Mocking AuthContext if Dashboard uses it
-// jest.mock('../../../../../finovabank_project/web-frontend/src/context/AuthContext', () => ({
-//   useAuth: () => ({ user: { name: 'Test User' } }),
-// }));
+jest.mock("../../services/api", () => ({
+  accountAPI: {
+    getAccounts: jest.fn().mockResolvedValue({
+      data: [
+        {
+          accountId: "ACC001",
+          accountType: "CHECKING",
+          balance: 5000.0,
+          currency: "USD",
+          createdAt: "2024-01-01",
+        },
+      ],
+    }),
+  },
+  transactionAPI: {
+    getTransactions: jest.fn().mockResolvedValue({
+      data: [
+        {
+          transactionId: "T001",
+          description: "Test Payment",
+          amount: 100,
+          transactionType: "DEBIT",
+          date: "2025-01-01",
+          category: "Shopping",
+        },
+      ],
+    }),
+  },
+  savingsAPI: {
+    getSavingsGoals: jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          goalName: "Vacation",
+          targetAmount: 5000,
+          currentAmount: 2500,
+          targetDate: "2025-12-31",
+        },
+      ],
+    }),
+  },
+}));
+
+const renderDashboard = () =>
+  render(
+    <BrowserRouter>
+      <Dashboard />
+    </BrowserRouter>,
+  );
 
 describe("Dashboard Page", () => {
-  test("renders dashboard elements", () => {
-    // Render the actual Dashboard component
-    render(<Dashboard />);
-
-    // Check for key elements expected in the actual Dashboard component
-    // These assertions might need adjustment based on the actual component's output
-    expect(
-      screen.getByRole("heading", { name: /dashboard/i }),
-    ).toBeInTheDocument();
-
-    // Example assertions (adjust based on actual component content):
-    // expect(screen.getByText(/Account Summary/i)).toBeInTheDocument();
-    // expect(screen.getByText(/Recent Transactions/i)).toBeInTheDocument();
-
-    // Add more specific assertions based on the real component's structure and data fetching
+  test("shows loading state initially", () => {
+    renderDashboard();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  // Add more tests, e.g., for interactions, loading states, error handling
-  // test('displays loading indicator when fetching data', () => { /* ... */ });
-  // test('displays error message if data fetching fails', () => { /* ... */ });
-  // test('navigates to transaction details on click', () => { /* ... */ });
+  test("renders welcome message with user name after load", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome back, Test User/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders total balance card", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/Total Balance/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders account balance from API", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/5,000\.00/)).toBeInTheDocument();
+    });
+  });
+
+  test("renders recent transactions section", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/Recent Transactions/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders transaction description", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText("Test Payment")).toBeInTheDocument();
+    });
+  });
+
+  test("renders savings goals section", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/Savings Goals/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders savings goal name", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText("Vacation")).toBeInTheDocument();
+    });
+  });
 });

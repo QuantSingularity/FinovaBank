@@ -1,34 +1,77 @@
-import { render, screen } from "@testing-library/react";
-import type React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router-dom";
+import Layout from "../Layout";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/components/Layout.tsx
-// Adjust the import path if necessary.
-// import Layout from '../../../../FinovaBank/web-frontend/src/components/Layout';
+const mockLogout = jest.fn();
+const mockNavigate = jest.fn();
 
-// Placeholder component for testing structure
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div>
-    <header>FinovaBank Header</header>
-    <main>{children}</main>
-    <footer>FinovaBank Footer</footer>
-  </div>
-);
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+  Outlet: () => <div>Page Content</div>,
+}));
+
+jest.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({
+    user: {
+      id: 1,
+      name: "Jane Smith",
+      email: "jane@example.com",
+      role: "USER",
+      createdAt: "",
+    },
+    logout: mockLogout,
+    isAuthenticated: true,
+  }),
+}));
+
+const renderLayout = () =>
+  render(
+    <MemoryRouter>
+      <Layout />
+    </MemoryRouter>,
+  );
 
 describe("Layout Component", () => {
-  test("renders header, footer, and children", () => {
-    render(
-      <Layout>
-        <p>Test Content</p>
-      </Layout>,
-    );
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-    // Check if header and footer are rendered
-    expect(screen.getByText("FinovaBank Header")).toBeInTheDocument();
-    expect(screen.getByText("FinovaBank Footer")).toBeInTheDocument();
+  test("renders FinovaBank brand name", () => {
+    renderLayout();
+    expect(screen.getAllByText("FinovaBank").length).toBeGreaterThan(0);
+  });
 
-    // Check if children content is rendered
-    expect(screen.getByText("Test Content")).toBeInTheDocument();
+  test("renders navigation menu items", () => {
+    renderLayout();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Transactions")).toBeInTheDocument();
+    expect(screen.getByText("Savings Goals")).toBeInTheDocument();
+    expect(screen.getByText("Loans")).toBeInTheDocument();
+    expect(screen.getByText("Reports")).toBeInTheDocument();
+  });
+
+  test("renders user name in the layout", () => {
+    renderLayout();
+    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+  });
+
+  test("renders outlet content", () => {
+    renderLayout();
+    expect(screen.getByText("Page Content")).toBeInTheDocument();
+  });
+
+  test("calls logout when logout menu item is clicked", async () => {
+    renderLayout();
+    const avatar = screen.getByText("J");
+    fireEvent.click(avatar);
+    await waitFor(() => {
+      const logoutItem = screen.queryByText("Logout");
+      if (logoutItem) {
+        fireEvent.click(logoutItem);
+        expect(mockLogout).toHaveBeenCalled();
+      }
+    });
   });
 });

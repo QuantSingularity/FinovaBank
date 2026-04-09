@@ -13,6 +13,7 @@ import {
   Person as PersonIcon,
   Savings as SavingsIcon,
   Settings as SettingsIcon,
+  ShowChart as ShowChartIcon,
 } from "@mui/icons-material";
 import {
   AppBar,
@@ -81,15 +82,14 @@ const Layout: React.FC = () => {
   const handleLogout = () => {
     handleProfileMenuClose();
     logout();
-    navigate("/login");
   };
 
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
-    { text: "Accounts", icon: <AccountBalanceIcon />, path: "/accounts" },
     { text: "Transactions", icon: <PaymentIcon />, path: "/transactions" },
     { text: "Savings Goals", icon: <SavingsIcon />, path: "/savings" },
     { text: "Loans", icon: <CreditCardIcon />, path: "/loans" },
+    { text: "Reports", icon: <ShowChartIcon />, path: "/reports" },
   ];
 
   const secondaryMenuItems = [

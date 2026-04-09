@@ -1,62 +1,127 @@
-import { render, screen } from "@testing-library/react";
-import type React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import AccountDetails from "../AccountDetails";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/pages/AccountDetails.tsx
-// Adjust the import path if necessary.
-// import AccountDetails from '../../../../FinovaBank/web-frontend/src/pages/AccountDetails';
-
-// Placeholder component for testing structure
-const AccountDetails: React.FC = () => {
-  // Mock data or state
-  const account = {
-    id: "ACC123456",
-    type: "Checking",
-    balance: 1159.06,
-    holderName: "John Doe",
-    openedDate: "2023-01-15",
-  };
-
-  return (
-    <div>
-      <h2>Account Details</h2>
-      <p>
-        <strong>Account Number:</strong> {account.id}
-      </p>
-      <p>
-        <strong>Account Type:</strong> {account.type}
-      </p>
-      <p>
-        <strong>Current Balance:</strong> ${account.balance.toFixed(2)}
-      </p>
-      <p>
-        <strong>Account Holder:</strong> {account.holderName}
-      </p>
-      <p>
-        <strong>Opened Date:</strong> {account.openedDate}
-      </p>
-    </div>
-  );
+const mockAccount = {
+  accountId: "ACC123456",
+  accountType: "CHECKING",
+  balance: 1159.06,
+  name: "John Doe",
+  email: "john@example.com",
+  currency: "USD",
+  createdAt: "2023-01-15T10:00:00",
+  createdDate: "2023-01-15",
 };
 
-describe("AccountDetails Page", () => {
-  test("renders account details correctly", () => {
-    render(<AccountDetails />);
+const mockTransactions = [
+  {
+    transactionId: "T001",
+    description: "Grocery Store",
+    amount: 75.5,
+    transactionType: "DEBIT",
+    date: "2025-05-01",
+    status: "COMPLETED",
+  },
+  {
+    transactionId: "T002",
+    description: "Salary",
+    amount: 2000.0,
+    transactionType: "CREDIT",
+    date: "2025-04-28",
+    status: "COMPLETED",
+  },
+];
 
-    // Check for key details
-    expect(screen.getByText("Account Details")).toBeInTheDocument();
-    expect(screen.getByText(/Account Number:/)).toBeInTheDocument();
-    expect(screen.getByText("ACC123456")).toBeInTheDocument();
-    expect(screen.getByText(/Account Type:/)).toBeInTheDocument();
-    expect(screen.getByText("Checking")).toBeInTheDocument();
-    expect(screen.getByText(/Current Balance:/)).toBeInTheDocument();
-    expect(screen.getByText(/\$1159\.06/)).toBeInTheDocument(); // Regex for currency
-    expect(screen.getByText(/Account Holder:/)).toBeInTheDocument();
-    expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText(/Opened Date:/)).toBeInTheDocument();
-    expect(screen.getByText("2023-01-15")).toBeInTheDocument();
+jest.mock("../../services/api", () => ({
+  accountAPI: {
+    getAccountDetails: jest.fn().mockResolvedValue({ data: mockAccount }),
+  },
+  transactionAPI: {
+    getTransactions: jest.fn().mockResolvedValue({ data: mockTransactions }),
+  },
+}));
+
+const renderAccountDetails = (accountId = "ACC123456") =>
+  render(
+    <MemoryRouter initialEntries={[`/accounts/${accountId}`]}>
+      <Routes>
+        <Route path="/accounts/:accountId" element={<AccountDetails />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+describe("AccountDetails Page", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  // Add tests for loading state, error handling, etc.
+  test("shows loading spinner initially", () => {
+    renderAccountDetails();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  test("renders account details heading", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("Account Details")).toBeInTheDocument();
+    });
+  });
+
+  test("renders account holder name", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
+    });
+  });
+
+  test("renders account type", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("CHECKING")).toBeInTheDocument();
+    });
+  });
+
+  test("renders masked account number", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("****3456")).toBeInTheDocument();
+    });
+  });
+
+  test("renders account balance", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("$1,159.06")).toBeInTheDocument();
+    });
+  });
+
+  test("renders transaction history", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("Transaction History")).toBeInTheDocument();
+    });
+  });
+
+  test("renders transaction descriptions in table", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("Grocery Store")).toBeInTheDocument();
+      expect(screen.getByText("Salary")).toBeInTheDocument();
+    });
+  });
+
+  test("renders account information card", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("Account Information")).toBeInTheDocument();
+    });
+  });
+
+  test("renders account actions card", async () => {
+    renderAccountDetails();
+    await waitFor(() => {
+      expect(screen.getByText("Account Actions")).toBeInTheDocument();
+    });
+  });
 });

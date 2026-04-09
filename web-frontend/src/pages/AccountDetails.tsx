@@ -20,22 +20,24 @@ import {
 } from "@mui/material";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { accountAPI, transactionAPI } from "../services/api";
 
 const AccountDetails: React.FC = () => {
   const { accountId } = useParams();
+  const navigate = useNavigate();
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accountData, setAccountData] = useState({
-    accountId: 0,
+    accountId: "" as string | number,
     name: "",
     email: "",
     balance: 0,
     accountNumber: "",
     accountType: "",
     createdDate: "",
+    currency: "",
   });
   const [transactions, setTransactions] = useState([]);
 
@@ -54,10 +56,14 @@ const AccountDetails: React.FC = () => {
           name: account.name,
           email: account.email,
           balance: account.balance,
-          accountNumber: `****${account.accountId.toString().slice(-4)}`,
+          accountNumber: `****${String(account.accountId).slice(-4)}`,
           accountType: account.accountType,
           createdDate:
-            account.createdDate || new Date().toISOString().split("T")[0],
+            account.createdDate ||
+            (account.createdAt
+              ? new Date(account.createdAt).toLocaleDateString()
+              : new Date().toISOString().split("T")[0]),
+          currency: account.currency || "USD",
         });
 
         // Fetch account transactions
@@ -224,17 +230,37 @@ const AccountDetails: React.FC = () => {
                   gap: 2,
                 }}
               >
-                <Button variant="contained" fullWidth sx={{ py: 1.5 }}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  sx={{ py: 1.5 }}
+                  onClick={() => navigate("/transactions")}
+                >
                   Transfer Money
                 </Button>
-                <Button variant="outlined" fullWidth sx={{ py: 1.5 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 1.5 }}
+                  onClick={() => navigate("/transactions")}
+                >
                   Deposit Funds
                 </Button>
-                <Button variant="outlined" fullWidth sx={{ py: 1.5 }}>
-                  Download Statement
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 1.5 }}
+                  onClick={() => navigate("/reports")}
+                >
+                  View Reports
                 </Button>
-                <Button variant="outlined" fullWidth sx={{ py: 1.5 }}>
-                  Account Settings
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  sx={{ py: 1.5 }}
+                  onClick={() => navigate("/savings")}
+                >
+                  Savings Goals
                 </Button>
               </Box>
             </CardContent>
@@ -274,7 +300,9 @@ const AccountDetails: React.FC = () => {
                         }}
                       >
                         <TableCell component="th" scope="row">
-                          {new Date(transaction.date).toLocaleDateString()}
+                          {new Date(
+                            transaction.date || transaction.timestamp,
+                          ).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
                           {transaction.description ||

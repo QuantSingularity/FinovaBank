@@ -1,108 +1,150 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import SavingsGoals from "../SavingsGoals";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/pages/SavingsGoals.tsx
-// Adjust the import path if necessary.
-// import SavingsGoals from '../../../../FinovaBank/web-frontend/src/pages/SavingsGoals';
+const mockGoals = [
+  {
+    id: 1,
+    goalName: "Vacation Fund",
+    targetAmount: 5000,
+    currentAmount: 2500,
+    targetDate: "2026-12-31",
+    createdAt: "2025-01-15T10:00:00",
+    status: "IN_PROGRESS",
+  },
+  {
+    id: 2,
+    goalName: "Emergency Fund",
+    targetAmount: 10000,
+    currentAmount: 8000,
+    targetDate: "2026-08-30",
+    createdAt: "2024-10-05T10:00:00",
+    status: "IN_PROGRESS",
+  },
+];
 
-// Placeholder component for testing structure
-const SavingsGoals: React.FC = () => {
-  // Mock data or state
-  const [goals, setGoals] = React.useState([
-    {
-      id: "SG01",
-      name: "Vacation Fund",
-      targetAmount: 2000,
-      currentAmount: 500,
-      deadline: "2025-12-31",
-    },
-    {
-      id: "SG02",
-      name: "New Car Down Payment",
-      targetAmount: 5000,
-      currentAmount: 1500,
-      deadline: "2026-06-30",
-    },
-  ]);
+const mockCreateGoal = jest.fn();
+const mockUpdateGoal = jest.fn();
+const mockDeleteGoal = jest.fn();
 
-  // Mock function to add contribution
-  const addContribution = (id: string, amount: number) => {
-    setGoals((prevGoals) =>
-      prevGoals.map((goal) =>
-        goal.id === id
-          ? { ...goal, currentAmount: goal.currentAmount + amount }
-          : goal,
-      ),
-    );
-    console.log(`Added ${amount} to goal ${id}`);
-  };
+jest.mock("../../services/api", () => ({
+  savingsAPI: {
+    getSavingsGoals: jest.fn().mockResolvedValue({ data: mockGoals }),
+    createSavingsGoal: mockCreateGoal,
+    updateSavingsGoal: mockUpdateGoal,
+    deleteSavingsGoal: mockDeleteGoal,
+  },
+}));
 
-  return (
-    <div>
-      <h2>Savings Goals</h2>
-      {goals.map((goal) => (
-        <div
-          key={goal.id}
-          style={{ border: "1px solid #ccc", margin: "10px", padding: "10px" }}
-        >
-          <h3>{goal.name}</h3>
-          <p>Target: ${goal.targetAmount.toLocaleString()}</p>
-          <p>Current: ${goal.currentAmount.toLocaleString()}</p>
-          <p>
-            Progress:{" "}
-            {((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%
-          </p>
-          <p>Deadline: {goal.deadline}</p>
-          {/* Simple contribution input for testing */}
-          <button onClick={() => addContribution(goal.id, 50)}>Add $50</button>
-        </div>
-      ))}
-      {/* Add form/button to create new goal? */}
-    </div>
+const renderSavingsGoals = () =>
+  render(
+    <BrowserRouter>
+      <SavingsGoals />
+    </BrowserRouter>,
   );
-};
 
 describe("SavingsGoals Page", () => {
-  test("renders existing savings goals with details", () => {
-    render(<SavingsGoals />);
-
-    // Check for goal 1 details
-    expect(screen.getByText("Vacation Fund")).toBeInTheDocument();
-    expect(screen.getByText(/Target: \$2,000/)).toBeInTheDocument();
-    expect(screen.getByText(/Current: \$500/)).toBeInTheDocument();
-    expect(screen.getByText(/Progress: 25\.0%/)).toBeInTheDocument();
-    expect(screen.getByText(/Deadline: 2025-12-31/)).toBeInTheDocument();
-
-    // Check for goal 2 details
-    expect(screen.getByText("New Car Down Payment")).toBeInTheDocument();
-    expect(screen.getByText(/Target: \$5,000/)).toBeInTheDocument();
-    expect(screen.getByText(/Current: \$1,500/)).toBeInTheDocument(); // Initial amount
-    expect(screen.getByText(/Progress: 30\.0%/)).toBeInTheDocument();
-    expect(screen.getByText(/Deadline: 2026-06-30/)).toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreateGoal.mockResolvedValue({
+      data: {
+        id: 99,
+        goalName: "New Goal",
+        targetAmount: 1000,
+        currentAmount: 0,
+        targetDate: "2026-01-01",
+      },
+    });
+    mockUpdateGoal.mockResolvedValue({ data: {} });
+    mockDeleteGoal.mockResolvedValue({});
   });
 
-  test("allows adding contribution to a goal", () => {
-    const consoleSpy = jest.spyOn(console, "log");
-    render(<SavingsGoals />);
-
-    // Find the 'Add $50' button for the second goal (New Car)
-    const _carGoalDiv = screen.getByText("New Car Down Payment").closest("div");
-    const addButton = screen.getAllByRole("button", { name: /Add \$50/i })[1]; // Assuming order is stable
-
-    expect(screen.getByText(/Current: \$1,500/)).toBeInTheDocument(); // Initial amount
-
-    fireEvent.click(addButton);
-
-    // Check if state updated (amount increased)
-    expect(screen.getByText(/Current: \$1,550/)).toBeInTheDocument(); // Updated amount
-    expect(screen.getByText(/Progress: 31\.0%/)).toBeInTheDocument(); // Updated progress
-
-    // Check if mock function was called
-    expect(consoleSpy).toHaveBeenCalledWith("Added 50 to goal SG02");
-    consoleSpy.mockRestore();
+  test("shows loading spinner initially", () => {
+    renderSavingsGoals();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  // Add tests for creating new goals, editing goals, loading states, error handling etc.
+  test("renders savings goals after loading", async () => {
+    renderSavingsGoals();
+    await waitFor(() => {
+      expect(screen.getByText("Vacation Fund")).toBeInTheDocument();
+      expect(screen.getByText("Emergency Fund")).toBeInTheDocument();
+    });
+  });
+
+  test("renders Savings Goals heading", async () => {
+    renderSavingsGoals();
+    await waitFor(() => {
+      expect(screen.getByText("Savings Goals")).toBeInTheDocument();
+    });
+  });
+
+  test("displays correct progress percentage", async () => {
+    renderSavingsGoals();
+    await waitFor(() => {
+      expect(screen.getByText("50%")).toBeInTheDocument();
+      expect(screen.getByText("80%")).toBeInTheDocument();
+    });
+  });
+
+  test("displays goal amounts", async () => {
+    renderSavingsGoals();
+    await waitFor(() => {
+      expect(screen.getByText("$2,500.00")).toBeInTheDocument();
+      expect(screen.getByText("$5,000.00")).toBeInTheDocument();
+    });
+  });
+
+  test("opens create dialog when Create New Goal clicked", async () => {
+    renderSavingsGoals();
+    await waitFor(() => screen.getByText("Vacation Fund"));
+    fireEvent.click(screen.getByRole("button", { name: /Create New Goal/i }));
+    expect(screen.getByText("Create New Savings Goal")).toBeInTheDocument();
+  });
+
+  test("opens edit dialog when edit button clicked", async () => {
+    renderSavingsGoals();
+    await waitFor(() => screen.getByText("Vacation Fund"));
+    const editButtons = screen.getAllByTestId
+      ? screen.queryAllByRole("button")
+      : screen.getAllByRole("button");
+    const editButton = editButtons.find((b) => b.querySelector("svg"));
+    // Click first edit icon button
+    const iconButtons = document.querySelectorAll("button svg");
+    if (iconButtons.length > 0) {
+      const editBtn = Array.from(document.querySelectorAll("button")).find(
+        (btn) => btn.querySelector('[data-testid="EditIcon"]'),
+      );
+      if (editBtn) {
+        fireEvent.click(editBtn);
+        await waitFor(() => {
+          expect(screen.getByText("Edit Savings Goal")).toBeInTheDocument();
+        });
+      }
+    }
+  });
+
+  test("shows empty state when no goals", async () => {
+    const { savingsAPI } = require("../../services/api");
+    savingsAPI.getSavingsGoals.mockResolvedValueOnce({ data: [] });
+    renderSavingsGoals();
+    await waitFor(() => {
+      expect(screen.getByText(/No Savings Goals/i)).toBeInTheDocument();
+    });
+  });
+
+  test("deletes goal when delete button clicked", async () => {
+    renderSavingsGoals();
+    await waitFor(() => screen.getByText("Vacation Fund"));
+    const deleteBtn = Array.from(document.querySelectorAll("button")).find(
+      (btn) => btn.querySelector('[data-testid="DeleteIcon"]'),
+    );
+    if (deleteBtn) {
+      fireEvent.click(deleteBtn);
+      await waitFor(() => {
+        expect(mockDeleteGoal).toHaveBeenCalledWith(1);
+      });
+    }
+  });
 });

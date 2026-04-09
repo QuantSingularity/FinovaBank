@@ -1,73 +1,102 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import Login from "../Login";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/pages/Login.tsx
-// Adjust the import path if necessary.
-// import Login from '../../../../FinovaBank/web-frontend/src/pages/Login';
+const mockLogin = jest.fn();
 
-// Placeholder component for testing structure
-const Login: React.FC = () => {
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const handleLogin = () => {
-    console.log("Logging in with:", username, password);
-    // Mock login logic
-  };
+jest.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({
+    login: mockLogin,
+    loading: false,
+    error: null,
+  }),
+}));
 
-  return (
-    <div>
-      <h2>Login</h2>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        aria-label="Username"
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        aria-label="Password"
-      />
-      <button onClick={handleLogin}>Login</button>
-    </div>
+const renderLogin = () =>
+  render(
+    <BrowserRouter>
+      <Login />
+    </BrowserRouter>,
   );
-};
 
 describe("Login Page", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   test("renders login form elements", () => {
-    render(<Login />);
-    expect(screen.getByLabelText("Username")).toBeInTheDocument();
-    expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
+    renderLogin();
+    expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Sign In/i }),
+    ).toBeInTheDocument();
   });
 
-  test("allows user to input username and password", () => {
-    render(<Login />);
-    const usernameInput = screen.getByLabelText("Username");
-    const passwordInput = screen.getByLabelText("Password");
-
-    fireEvent.change(usernameInput, { target: { value: "testuser" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-
-    expect(usernameInput).toHaveValue("testuser");
-    expect(passwordInput).toHaveValue("password123");
+  test("renders brand name", () => {
+    renderLogin();
+    expect(screen.getByText("FinovaBank")).toBeInTheDocument();
   });
 
-  test("calls login handler on button click", () => {
-    // Mock the console.log or the actual login function if imported
-    const consoleSpy = jest.spyOn(console, "log");
-    render(<Login />);
-    const loginButton = screen.getByRole("button", { name: /login/i });
+  test("shows error when submitting empty form", async () => {
+    renderLogin();
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Please enter both email and password/i),
+      ).toBeInTheDocument();
+    });
+  });
 
-    fireEvent.click(loginButton);
+  test("calls login with email and password on submit", async () => {
+    mockLogin.mockResolvedValueOnce(undefined);
+    renderLogin();
 
-    // Check if the mock login logic (console.log in this placeholder) was called
-    expect(consoleSpy).toHaveBeenCalled(); // Or check if the actual login function was called
-    consoleSpy.mockRestore(); // Clean up the spy
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+      target: { value: "user@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Password$/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith("user@example.com", "password123");
+    });
+  });
+
+  test("displays error message when login fails", async () => {
+    mockLogin.mockRejectedValueOnce(new Error("Invalid credentials"));
+    renderLogin();
+
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+      target: { value: "user@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Password$/i), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+  });
+
+  test("toggles password visibility", () => {
+    renderLogin();
+    const passwordInput = screen.getByLabelText(/^Password$/i);
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    const toggleButton = screen.getByLabelText(/Show password/i);
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "text");
+  });
+
+  test("has link to register page", () => {
+    renderLogin();
+    const signUpLink = screen.getByRole("link", { name: /Sign Up/i });
+    expect(signUpLink).toBeInTheDocument();
+    expect(signUpLink).toHaveAttribute("href", "/register");
   });
 });

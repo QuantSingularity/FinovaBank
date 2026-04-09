@@ -1,7 +1,6 @@
 import axios from "axios";
 
-// Type definitions
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
@@ -9,7 +8,7 @@ interface User {
   createdAt: string;
 }
 
-interface Account {
+export interface Account {
   accountId: string;
   type: string;
   accountType: string;
@@ -21,19 +20,23 @@ interface Account {
   createdDate?: string;
 }
 
-interface Transaction {
-  transactionId: string;
-  type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER";
-  transactionType: "CREDIT" | "DEBIT";
+export interface Transaction {
+  id?: number;
+  transactionId?: string;
+  type: string;
+  transactionType?: "CREDIT" | "DEBIT";
   amount: number;
   description: string;
-  date: string;
-  accountId: string;
+  date?: string;
+  timestamp?: string;
+  accountId: string | number;
   category?: string;
   status?: string;
+  referenceNumber?: string;
+  currency?: string;
 }
 
-interface Loan {
+export interface Loan {
   id: number;
   loanAmount: number;
   loanType: string;
@@ -46,45 +49,64 @@ interface Loan {
   nextPaymentDate: string;
 }
 
-interface SavingsGoal {
+export interface SavingsGoal {
   id: number;
   goalId?: number;
-  name: string;
   goalName: string;
   targetAmount: number;
   currentAmount: number;
   targetDate: string;
-  createdAt: string;
-  createdDate?: string;
-  progress?: number;
-  category?: string;
+  createdAt?: string;
+  description?: string;
+  status?: string;
 }
 
-interface CreateAccountData {
+export interface Report {
+  id: number;
+  accountId?: number;
+  customerId?: string;
+  reportType: string;
+  details?: string;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  filePath?: string;
+  generatedAt: string;
+  requestedBy?: string;
+}
+
+export interface CreateAccountData {
   type: string;
   currency: string;
 }
 
-interface CreateTransactionData {
-  type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER";
+export interface CreateTransactionData {
+  type: string;
   amount: number;
   description: string;
-  accountId: string;
+  accountId: string | number;
+  destinationAccountId?: number;
+  currency?: string;
 }
 
-interface CreateLoanData {
+export interface CreateLoanData {
   loanAmount: number;
   loanType: string;
   durationInMonths: number;
 }
 
-interface CreateSavingsGoalData {
+export interface CreateSavingsGoalData {
   goalName: string;
   targetAmount: number;
   targetDate: string;
+  description?: string;
 }
 
-// Create axios instance
+export interface CreateReportData {
+  reportType: string;
+  accountId?: number;
+  customerId?: string;
+  requestedBy?: string;
+}
+
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:8080/api",
   headers: {
@@ -92,7 +114,6 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem("token");
@@ -106,14 +127,12 @@ api.interceptors.request.use(
   },
 );
 
-// Response interceptor for handling errors
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Handle unauthorized access
       sessionStorage.removeItem("token");
       sessionStorage.removeItem("user");
       window.location.href = "/login";
@@ -122,7 +141,6 @@ api.interceptors.response.use(
   },
 );
 
-// Account API
 export const accountAPI = {
   getAccounts: () => api.get<Account[]>("/accounts"),
 
@@ -133,7 +151,6 @@ export const accountAPI = {
     api.post<Account>("/accounts", data),
 };
 
-// Transaction API
 export const transactionAPI = {
   getTransactions: (params?: {
     accountId?: string;
@@ -142,11 +159,13 @@ export const transactionAPI = {
     limit?: number;
   }) => api.get<Transaction[]>("/transactions", { params }),
 
+  getTransactionById: (id: number | string) =>
+    api.get<Transaction>(`/transactions/${id}`),
+
   createTransaction: (data: CreateTransactionData) =>
     api.post<Transaction>("/transactions", data),
 };
 
-// Auth API
 export const authAPI = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: User }>("/auth/login", { email, password }),
@@ -162,7 +181,6 @@ export const authAPI = {
     api.post<{ valid: boolean }>("/auth/verify", { token }),
 };
 
-// Loan API
 export const loanAPI = {
   getLoans: () => api.get<Loan[]>("/loans"),
 
@@ -171,20 +189,29 @@ export const loanAPI = {
   applyForLoan: (data: CreateLoanData) => api.post<Loan>("/loans", data),
 };
 
-// Savings API
 export const savingsAPI = {
-  getSavingsGoals: () => api.get<SavingsGoal[]>("/savings"),
+  getSavingsGoals: () => api.get<SavingsGoal[]>("/savings-goals"),
 
-  getSavingsGoalDetails: (goalId: string) =>
-    api.get<SavingsGoal>(`/savings/${goalId}`),
+  getSavingsGoalById: (goalId: string | number) =>
+    api.get<SavingsGoal>(`/savings-goals/${goalId}`),
 
   createSavingsGoal: (data: CreateSavingsGoalData) =>
-    api.post<SavingsGoal>("/savings", data),
+    api.post<SavingsGoal>("/savings-goals", data),
 
   updateSavingsGoal: (goalId: number, data: Partial<CreateSavingsGoalData>) =>
-    api.put<SavingsGoal>(`/savings/${goalId}`, data),
+    api.put<SavingsGoal>(`/savings-goals/${goalId}`, data),
 
-  deleteSavingsGoal: (goalId: number) => api.delete<void>(`/savings/${goalId}`),
+  deleteSavingsGoal: (goalId: number) =>
+    api.delete<void>(`/savings-goals/${goalId}`),
+};
+
+export const reportAPI = {
+  getReports: () => api.get<Report[]>("/reports"),
+
+  getReportById: (reportId: number | string) =>
+    api.get<Report>(`/reports/${reportId}`),
+
+  createReport: (data: CreateReportData) => api.post<Report>("/reports", data),
 };
 
 export default api;

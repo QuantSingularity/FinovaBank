@@ -1,115 +1,155 @@
-import { render, screen } from "@testing-library/react";
-import type React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import Loans from "../Loans";
 
-// Assuming the component exists in the original project at:
-// /FinovaBank/web-frontend/src/pages/Loans.tsx
-// Adjust the import path if necessary.
-// import Loans from '../../../../FinovaBank/web-frontend/src/pages/Loans';
+const mockLoans = [
+  {
+    id: 1001,
+    loanAmount: 10000.0,
+    loanType: "PERSONAL",
+    interestRate: 5.25,
+    durationInMonths: 24,
+    monthlyPayment: 438.71,
+    remainingAmount: 8500.5,
+    status: "APPROVED",
+    approvalDate: "2025-01-15",
+    nextPaymentDate: "2025-05-15",
+  },
+  {
+    id: 1002,
+    loanAmount: 5000.0,
+    loanType: "EDUCATION",
+    interestRate: 4.5,
+    durationInMonths: 12,
+    monthlyPayment: 428.04,
+    remainingAmount: 2140.2,
+    status: "PENDING",
+    approvalDate: "",
+    nextPaymentDate: "",
+  },
+];
 
-// Placeholder component for testing structure
-const Loans: React.FC = () => {
-  // Mock data or state
-  const userLoans = [
-    {
-      id: "L001",
-      type: "Personal Loan",
-      amount: 10000,
-      status: "Approved",
-      nextPaymentDue: "2025-06-01",
-    },
-    {
-      id: "L002",
-      type: "Mortgage",
-      amount: 250000,
-      status: "Active",
-      nextPaymentDue: "2025-05-15",
-    },
-  ];
+const mockApplyForLoan = jest.fn();
 
-  return (
-    <div>
-      <h2>My Loans</h2>
-      {userLoans.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Loan ID</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Next Payment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userLoans.map((loan) => (
-              <tr key={loan.id}>
-                <td>{loan.id}</td>
-                <td>{loan.type}</td>
-                <td>${loan.amount.toLocaleString()}</td>
-                <td>{loan.status}</td>
-                <td>{loan.nextPaymentDue}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>You have no active loans.</p>
-      )}
-      {/* Add button or link to apply for a new loan? */}
-      {/* <button>Apply for New Loan</button> */}
-    </div>
+jest.mock("../../services/api", () => ({
+  loanAPI: {
+    getLoans: jest.fn().mockResolvedValue({ data: mockLoans }),
+    applyForLoan: mockApplyForLoan,
+  },
+}));
+
+const renderLoans = () =>
+  render(
+    <BrowserRouter>
+      <Loans />
+    </BrowserRouter>,
   );
-};
 
 describe("Loans Page", () => {
-  test("renders loan information table when loans exist", () => {
-    render(<Loans />);
-
-    // Check for headers
-    expect(
-      screen.getByRole("columnheader", { name: /Loan ID/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: /Type/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: /Amount/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: /Status/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: /Next Payment/i }),
-    ).toBeInTheDocument();
-
-    // Check for loan data
-    expect(screen.getByRole("cell", { name: "L001" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("cell", { name: "Personal Loan" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: /\$10,000/ })).toBeInTheDocument(); // Check formatted amount
-    expect(screen.getByRole("cell", { name: "Approved" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("cell", { name: "2025-06-01" }),
-    ).toBeInTheDocument();
-
-    expect(screen.getByRole("cell", { name: "L002" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "Mortgage" })).toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockApplyForLoan.mockResolvedValue({
+      data: {
+        id: 9999,
+        loanAmount: 5000,
+        loanType: "PERSONAL",
+        interestRate: 5.25,
+        durationInMonths: 12,
+        monthlyPayment: 450,
+        remainingAmount: 5000,
+        status: "PENDING",
+        approvalDate: "",
+        nextPaymentDate: "",
+      },
+    });
   });
 
-  test("renders message when no loans exist", () => {
-    // Override mock data for this test
-    const NoLoansComponent: React.FC = () => (
-      <div>
-        <h2>My Loans</h2>
-        <p>You have no active loans.</p>
-      </div>
+  test("shows loading spinner initially", () => {
+    renderLoans();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  test("renders loans after loading", async () => {
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText("Loan #1001")).toBeInTheDocument();
+      expect(screen.getByText("Loan #1002")).toBeInTheDocument();
+    });
+  });
+
+  test("renders loan management heading", async () => {
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText("Loan Management")).toBeInTheDocument();
+    });
+  });
+
+  test("displays loan status chips", async () => {
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText("APPROVED")).toBeInTheDocument();
+      expect(screen.getByText("PENDING")).toBeInTheDocument();
+    });
+  });
+
+  test("displays loan amounts", async () => {
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText("$10,000.00")).toBeInTheDocument();
+      expect(screen.getByText("$5,000.00")).toBeInTheDocument();
+    });
+  });
+
+  test("displays loan types", async () => {
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText("PERSONAL")).toBeInTheDocument();
+      expect(screen.getByText("EDUCATION")).toBeInTheDocument();
+    });
+  });
+
+  test("opens apply dialog when button is clicked", async () => {
+    renderLoans();
+    await waitFor(() => screen.getByText("Loan Management"));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Apply for New Loan/i }),
     );
-    render(<NoLoansComponent />);
-    expect(screen.getByText("You have no active loans.")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByText("Apply for a New Loan")).toBeInTheDocument();
   });
 
-  // Add tests for applying for a new loan, loading states, error handling etc.
+  test("shows empty state when no loans exist", async () => {
+    const { loanAPI } = require("../../services/api");
+    loanAPI.getLoans.mockResolvedValueOnce({ data: [] });
+    renderLoans();
+    await waitFor(() => {
+      expect(screen.getByText(/No Active Loans/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders Apply for a Loan button in empty state", async () => {
+    const { loanAPI } = require("../../services/api");
+    loanAPI.getLoans.mockResolvedValueOnce({ data: [] });
+    renderLoans();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Apply for a Loan/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("submits loan application", async () => {
+    renderLoans();
+    await waitFor(() => screen.getByText("Loan Management"));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Apply for New Loan/i }),
+    );
+    expect(screen.getByText("Apply for a New Loan")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Submit Application/i }),
+    );
+    await waitFor(() => {
+      expect(mockApplyForLoan).toHaveBeenCalled();
+    });
+  });
 });

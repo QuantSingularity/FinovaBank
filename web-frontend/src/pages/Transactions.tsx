@@ -21,14 +21,21 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  FormControl,
   IconButton,
   InputAdornment,
+  InputLabel,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
   Paper,
+  Select,
   Tab,
   Tabs,
   TextField,
@@ -51,6 +58,15 @@ const Transactions: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    type: "DEPOSIT",
+    amount: "",
+    description: "",
+    accountId: "",
+  });
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -108,6 +124,43 @@ const Transactions: React.FC = () => {
 
     return true;
   });
+
+  const handleTransferSubmit = async () => {
+    if (
+      !transferForm.amount ||
+      !transferForm.description ||
+      !transferForm.accountId
+    ) {
+      setTransferError("Please fill in all required fields");
+      return;
+    }
+    try {
+      setTransferLoading(true);
+      setTransferError(null);
+      const response = await transactionAPI.createTransaction({
+        type: transferForm.type,
+        amount: parseFloat(transferForm.amount),
+        description: transferForm.description,
+        accountId: transferForm.accountId,
+      });
+      if (response.data) {
+        setTransactions((prev: any) => [response.data, ...prev]);
+      }
+      setShowTransferDialog(false);
+      setTransferForm({
+        type: "DEPOSIT",
+        amount: "",
+        description: "",
+        accountId: "",
+      });
+    } catch (err: any) {
+      setTransferError(
+        err.response?.data?.message || "Transaction failed. Please try again.",
+      );
+    } finally {
+      setTransferLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -168,7 +221,7 @@ const Transactions: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AttachMoneyIcon />}
-            onClick={() => navigate("/transfer")}
+            onClick={() => setShowTransferDialog(true)}
           >
             New Transfer
           </Button>
@@ -436,7 +489,7 @@ const Transactions: React.FC = () => {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={() => navigate("/transfer")}
+                onClick={() => setShowTransferDialog(true)}
               >
                 New Transaction
               </Button>
@@ -444,6 +497,80 @@ const Transactions: React.FC = () => {
           </Box>
         )}
       </Paper>
+
+      {/* Transfer Dialog */}
+      <Dialog
+        open={showTransferDialog}
+        onClose={() => setShowTransferDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: "bold" }}>New Transaction</DialogTitle>
+        <DialogContent>
+          {transferError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {transferError}
+            </Alert>
+          )}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>Transaction Type</InputLabel>
+              <Select
+                value={transferForm.type}
+                label="Transaction Type"
+                onChange={(e) =>
+                  setTransferForm({ ...transferForm, type: e.target.value })
+                }
+              >
+                <MenuItem value="DEPOSIT">Deposit</MenuItem>
+                <MenuItem value="WITHDRAWAL">Withdrawal</MenuItem>
+                <MenuItem value="TRANSFER">Transfer</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Account ID"
+              value={transferForm.accountId}
+              onChange={(e) =>
+                setTransferForm({ ...transferForm, accountId: e.target.value })
+              }
+              fullWidth
+            />
+            <TextField
+              label="Amount ($)"
+              type="number"
+              value={transferForm.amount}
+              onChange={(e) =>
+                setTransferForm({ ...transferForm, amount: e.target.value })
+              }
+              fullWidth
+              inputProps={{ min: 0.01, step: 0.01 }}
+            />
+            <TextField
+              label="Description"
+              value={transferForm.description}
+              onChange={(e) =>
+                setTransferForm({
+                  ...transferForm,
+                  description: e.target.value,
+                })
+              }
+              fullWidth
+              multiline
+              rows={2}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setShowTransferDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleTransferSubmit}
+            disabled={transferLoading}
+          >
+            {transferLoading ? "Processing..." : "Submit"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Transaction Menu */}
       <Menu

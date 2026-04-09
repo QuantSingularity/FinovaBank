@@ -72,6 +72,7 @@ const Dashboard: React.FC = () => {
     balance: 0,
     accountNumber: "",
     accountType: "",
+    accountId: "",
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
@@ -89,8 +90,9 @@ const Dashboard: React.FC = () => {
           const account = accountsResponse.data[0]; // Get first account
           setAccountData({
             balance: account.balance,
-            accountNumber: `****${account.accountId.toString().slice(-4)}`,
+            accountNumber: `****${String(account.accountId).slice(-4)}`,
             accountType: account.accountType,
+            accountId: String(account.accountId),
           });
         }
 
@@ -733,9 +735,7 @@ const Dashboard: React.FC = () => {
                             cursor: "pointer",
                           },
                         }}
-                        onClick={() =>
-                          navigate(`/transactions/${transaction.transactionId}`)
-                        }
+                        onClick={() => navigate("/transactions")}
                       >
                         <Box
                           sx={{
@@ -1007,7 +1007,7 @@ const Dashboard: React.FC = () => {
                 <Button
                   variant="outlined"
                   fullWidth
-                  onClick={() => navigate("/accounts/1")}
+                  onClick={() => navigate(`/accounts/${accountData.accountId}`)}
                 >
                   View Account Details
                 </Button>
@@ -1084,7 +1084,7 @@ const Dashboard: React.FC = () => {
                           cursor: "pointer",
                         },
                       }}
-                      onClick={() => navigate(`/savings/${goal.goalId}`)}
+                      onClick={() => navigate("/savings")}
                     >
                       <Box
                         sx={{
@@ -1120,7 +1120,7 @@ const Dashboard: React.FC = () => {
                                     : "💰"}
                           </Box>
                           <Typography variant="subtitle1" fontWeight={600}>
-                            {goal.name}
+                            {goal.goalName || goal.name}
                           </Typography>
                         </Box>
                         <Typography
@@ -1258,8 +1258,8 @@ const Dashboard: React.FC = () => {
                 <Button
                   variant="outlined"
                   fullWidth
-                  startIcon={<CreditCardIcon />}
-                  onClick={() => navigate("/cards")}
+                  startIcon={<AccountIcon />}
+                  onClick={() => navigate("/accounts/" + accountData.accountId)}
                 >
                   Manage Cards
                 </Button>
@@ -1267,15 +1267,15 @@ const Dashboard: React.FC = () => {
                   variant="outlined"
                   fullWidth
                   startIcon={<ReceiptIcon />}
-                  onClick={() => navigate("/bills")}
+                  onClick={() => navigate("/transactions")}
                 >
                   Pay Bills
                 </Button>
                 <Button
                   variant="outlined"
                   fullWidth
-                  startIcon={<NotificationsIcon />}
-                  onClick={() => navigate("/notifications")}
+                  startIcon={<ShowChartIcon />}
+                  onClick={() => navigate("/reports")}
                 >
                   Notifications
                 </Button>
