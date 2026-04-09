@@ -9,6 +9,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  createdAt: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
@@ -17,14 +25,6 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   loading: boolean;
   error: string | null;
-}
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "USER" | "ADMIN";
-  createdAt: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,8 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setUser(JSON.parse(storedUser));
               setIsAuthenticated(true);
             } else {
-              sessionStorage.removeItem("token");
-              sessionStorage.removeItem("user");
+              handleClearAuth();
             }
           } catch {
             setUser(JSON.parse(storedUser));
@@ -71,8 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (err) {
         console.error("Auth verification failed:", err);
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("user");
+        handleClearAuth();
       } finally {
         setLoading(false);
       }
@@ -81,23 +79,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
+  const handleClearAuth = () => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
       const response = await authAPI.login(email, password);
-
-      const { token, user } = response.data;
+      const { token, user: userData } = response.data;
 
       sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("user", JSON.stringify(userData));
 
-      setUser(user);
+      setUser(userData as User);
       setIsAuthenticated(true);
       navigate("/");
-    } catch (error: any) {
+    } catch (err: any) {
       const msg =
-        error.response?.data?.message || "Login failed. Please try again.";
+        err.response?.data?.message || "Login failed. Please try again.";
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -106,10 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    setUser(null);
-    setIsAuthenticated(false);
+    handleClearAuth();
     navigate("/login");
   };
 
@@ -118,19 +119,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       const response = await authAPI.register(name, email, password);
-
-      const { token, user } = response.data;
+      const { token, user: userData } = response.data;
 
       sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("user", JSON.stringify(userData));
 
-      setUser(user);
+      setUser(userData as User);
       setIsAuthenticated(true);
       navigate("/");
-    } catch (error: any) {
+    } catch (err: any) {
       const msg =
-        error.response?.data?.message ||
-        "Registration failed. Please try again.";
+        err.response?.data?.message || "Registration failed. Please try again.";
       setError(msg);
       throw new Error(msg);
     } finally {

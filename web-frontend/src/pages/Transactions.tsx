@@ -1,5 +1,3 @@
-// Modern Transactions page with enhanced UI
-
 import {
   Add as AddIcon,
   ArrowDownward as ArrowDownwardIcon,
@@ -43,21 +41,26 @@ import {
   useTheme,
 } from "@mui/material";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+// Ensure GridCompatibility is imported correctly
 import GridCompatibility from "../components/GridCompatibility";
-import { transactionAPI } from "../services/api";
+import { transactionAPI, type Transaction } from "../services/api";
 
 const Transactions: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [transferForm, setTransferForm] = useState({
     type: "DEPOSIT",
@@ -65,28 +68,27 @@ const Transactions: React.FC = () => {
     description: "",
     accountId: "",
   });
+
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch transactions
-        const response = await transactionAPI.getTransactions();
-        setTransactions(response.data || []);
-      } catch (err) {
-        console.error("Error fetching transactions:", err);
-        setError("Failed to load transactions. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
+  const fetchTransactions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await transactionAPI.getTransactions();
+      setTransactions(response.data || []);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setError("Failed to load transactions. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -94,7 +96,7 @@ const Transactions: React.FC = () => {
 
   const handleMenuOpen = (
     event: React.MouseEvent<HTMLElement>,
-    transaction: any,
+    transaction: Transaction,
   ) => {
     setAnchorEl(event.currentTarget);
     setSelectedTransaction(transaction);
@@ -105,7 +107,7 @@ const Transactions: React.FC = () => {
     setSelectedTransaction(null);
   };
 
-  const filteredTransactions = transactions.filter((transaction: any) => {
+  const filteredTransactions = transactions.filter((transaction) => {
     // Filter by tab
     if (activeTab === 1 && transaction.transactionType !== "CREDIT")
       return false;
@@ -143,9 +145,11 @@ const Transactions: React.FC = () => {
         description: transferForm.description,
         accountId: transferForm.accountId,
       });
+
       if (response.data) {
-        setTransactions((prev: any) => [response.data, ...prev]);
+        setTransactions((prev) => [response.data, ...prev]);
       }
+
       setShowTransferDialog(false);
       setTransferForm({
         type: "DEPOSIT",
@@ -177,24 +181,9 @@ const Transactions: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-        <Button
-          variant="contained"
-          sx={{ mt: 2 }}
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </Button>
-      </Box>
-    );
-  }
-
   return (
     <Box>
-      {/* Transactions Header */}
+      {/* Header Section */}
       <Box
         sx={{
           mb: 4,
@@ -231,6 +220,20 @@ const Transactions: React.FC = () => {
         </Box>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button
+            color="inherit"
+            size="small"
+            onClick={fetchTransactions}
+            sx={{ ml: 2 }}
+          >
+            Retry
+          </Button>
+        </Alert>
+      )}
+
       {/* Filters and Search */}
       <Paper
         elevation={0}
@@ -241,8 +244,9 @@ const Transactions: React.FC = () => {
           mb: 3,
         }}
       >
-        <GridCompatibility container spacing={3} alignItems="center">
-          <GridCompatibility xs={12} md={6}>
+        {/* Fixed GridCompatibility props: Using item and container correctly */}
+        <GridCompatibility container spacing={3}>
+          <GridCompatibility item xs={12} md={6}>
             <TextField
               fullWidth
               placeholder="Search transactions..."
@@ -259,8 +263,7 @@ const Transactions: React.FC = () => {
               size="small"
             />
           </GridCompatibility>
-
-          <GridCompatibility xs={12} md={6}>
+          <GridCompatibility item xs={12} md={6}>
             <Box
               sx={{
                 display: "flex",
@@ -287,7 +290,7 @@ const Transactions: React.FC = () => {
         </GridCompatibility>
       </Paper>
 
-      {/* Tabs Navigation */}
+      {/* Tabs */}
       <Box sx={{ mb: 3 }}>
         <Tabs
           value={activeTab}
@@ -301,37 +304,13 @@ const Transactions: React.FC = () => {
             },
           }}
         >
-          <Tab
-            label="All Transactions"
-            sx={{
-              fontWeight: 600,
-              "&.Mui-selected": {
-                color: theme.palette.primary.main,
-              },
-            }}
-          />
-          <Tab
-            label="Income"
-            sx={{
-              fontWeight: 600,
-              "&.Mui-selected": {
-                color: theme.palette.primary.main,
-              },
-            }}
-          />
-          <Tab
-            label="Expenses"
-            sx={{
-              fontWeight: 600,
-              "&.Mui-selected": {
-                color: theme.palette.primary.main,
-              },
-            }}
-          />
+          <Tab label="All Transactions" sx={{ fontWeight: 600 }} />
+          <Tab label="Income" sx={{ fontWeight: 600 }} />
+          <Tab label="Expenses" sx={{ fontWeight: 600 }} />
         </Tabs>
       </Box>
 
-      {/* Transactions List */}
+      {/* Transaction List */}
       <Paper
         elevation={0}
         sx={{
@@ -361,18 +340,14 @@ const Transactions: React.FC = () => {
 
         {filteredTransactions.length > 0 ? (
           <Box>
-            {filteredTransactions.map((transaction: any) => (
+            {filteredTransactions.map((transaction) => (
               <Box
                 key={transaction.transactionId}
                 sx={{
                   p: 3,
                   borderBottom: `1px solid ${theme.palette.divider}`,
-                  "&:last-child": {
-                    borderBottom: "none",
-                  },
-                  "&:hover": {
-                    bgcolor: "rgba(0, 0, 0, 0.01)",
-                  },
+                  "&:last-child": { borderBottom: "none" },
+                  "&:hover": { bgcolor: "rgba(0, 0, 0, 0.01)" },
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -400,7 +375,6 @@ const Transactions: React.FC = () => {
                       <ArrowDownwardIcon />
                     )}
                   </Avatar>
-
                   <Box>
                     <Typography variant="subtitle1" fontWeight={600}>
                       {transaction.description ||
@@ -410,16 +384,10 @@ const Transactions: React.FC = () => {
                       sx={{ display: "flex", alignItems: "center", mt: 0.5 }}
                     >
                       <Typography variant="body2" color="text.secondary">
-                        {new Date(transaction.date).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
+                        {new Date(
+                          transaction.date || transaction.timestamp || "",
+                        ).toLocaleDateString()}
                       </Typography>
-
                       {transaction.category && (
                         <>
                           <Box
@@ -446,7 +414,6 @@ const Transactions: React.FC = () => {
                     </Box>
                   </Box>
                 </Box>
-
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Typography
                     variant="subtitle1"
@@ -459,11 +426,10 @@ const Transactions: React.FC = () => {
                     sx={{ mr: 2 }}
                   >
                     {transaction.transactionType === "CREDIT" ? "+" : "-"}$
-                    {Math.abs(transaction.amount).toLocaleString("en-US", {
+                    {Math.abs(transaction.amount || 0).toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                     })}
                   </Typography>
-
                   <IconButton
                     size="small"
                     onClick={(e) => handleMenuOpen(e, transaction)}
@@ -476,29 +442,14 @@ const Transactions: React.FC = () => {
           </Box>
         ) : (
           <Box sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              {searchQuery
-                ? "No transactions match your search criteria."
-                : activeTab === 0
-                  ? "No transactions found."
-                  : activeTab === 1
-                    ? "No income transactions found."
-                    : "No expense transactions found."}
+            <Typography variant="body1" color="text.secondary">
+              No transactions match your search criteria.
             </Typography>
-            {!searchQuery && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setShowTransferDialog(true)}
-              >
-                New Transaction
-              </Button>
-            )}
           </Box>
         )}
       </Paper>
 
-      {/* Transfer Dialog */}
+      {/* New Transaction Dialog */}
       <Dialog
         open={showTransferDialog}
         onClose={() => setShowTransferDialog(false)}
@@ -514,10 +465,10 @@ const Transactions: React.FC = () => {
           )}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             <FormControl fullWidth>
-              <InputLabel>Transaction Type</InputLabel>
+              <InputLabel>Type</InputLabel>
               <Select
                 value={transferForm.type}
-                label="Transaction Type"
+                label="Type"
                 onChange={(e) =>
                   setTransferForm({ ...transferForm, type: e.target.value })
                 }
@@ -543,7 +494,6 @@ const Transactions: React.FC = () => {
                 setTransferForm({ ...transferForm, amount: e.target.value })
               }
               fullWidth
-              inputProps={{ min: 0.01, step: 0.01 }}
             />
             <TextField
               label="Description"
@@ -572,18 +522,11 @@ const Transactions: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Transaction Menu */}
+      {/* Row Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            boxShadow: "0px 8px 20px rgba(0, 0, 0, 0.1)",
-            borderRadius: 2,
-          },
-        }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
@@ -603,12 +546,6 @@ const Transactions: React.FC = () => {
             <EditIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Edit Category</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <DownloadIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Download Receipt</ListItemText>
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleMenuClose} sx={{ color: "error.main" }}>

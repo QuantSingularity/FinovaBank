@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -19,70 +18,51 @@ import {
   useTheme,
 } from "@mui/material";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { accountAPI, transactionAPI } from "../services/api";
+import {
+  accountAPI,
+  transactionAPI,
+  type Transaction,
+  type Account,
+} from "../services/api";
 
 const AccountDetails: React.FC = () => {
-  const { accountId } = useParams();
+  const { accountId } = useParams<{ accountId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [accountData, setAccountData] = useState({
-    accountId: "" as string | number,
-    name: "",
-    email: "",
-    balance: 0,
-    accountNumber: "",
-    accountType: "",
-    createdDate: "",
-    currency: "",
-  });
-  const [transactions, setTransactions] = useState([]);
 
-  useEffect(() => {
-    const fetchAccountDetails = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const [accountData, setAccountData] = useState<Account | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-        // Fetch account details
-        const accountResponse = await accountAPI.getAccountDetails(accountId);
-        const account = accountResponse.data;
+  const fetchAccountDetails = useCallback(async () => {
+    if (!accountId) return;
 
-        setAccountData({
-          accountId: account.accountId,
-          name: account.name,
-          email: account.email,
-          balance: account.balance,
-          accountNumber: `****${String(account.accountId).slice(-4)}`,
-          accountType: account.accountType,
-          createdDate:
-            account.createdDate ||
-            (account.createdAt
-              ? new Date(account.createdAt).toLocaleDateString()
-              : new Date().toISOString().split("T")[0]),
-          currency: account.currency || "USD",
-        });
+    try {
+      setLoading(true);
+      setError(null);
 
-        // Fetch account transactions
-        const transactionsResponse = await transactionAPI.getTransactions({
-          accountId,
-        });
-        setTransactions(transactionsResponse.data || []);
-      } catch (err) {
-        console.error("Error fetching account details:", err);
-        setError("Failed to load account details. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      const [accountResponse, transactionsResponse] = await Promise.all([
+        accountAPI.getAccountDetails(accountId),
+        transactionAPI.getTransactions({ accountId }),
+      ]);
 
-    if (accountId) {
-      fetchAccountDetails();
+      setAccountData(accountResponse.data);
+      setTransactions(transactionsResponse.data || []);
+    } catch (err) {
+      console.error("Error fetching account details:", err);
+      setError("Failed to load account details. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   }, [accountId]);
+
+  useEffect(() => {
+    fetchAccountDetails();
+  }, [fetchAccountDetails]);
 
   if (loading) {
     return (
@@ -94,19 +74,21 @@ const AccountDetails: React.FC = () => {
           height: "80vh",
         }}
       >
-        <CircularProgress />
+        <CircularProgress aria-label="Loading account details" />
       </Box>
     );
   }
 
-  if (error) {
+  if (error || !accountData) {
     return (
-      <Box sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
+      <Box sx={{ mt: 4, p: 3 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error || "Account not found."}
+        </Alert>
         <Button
           variant="contained"
-          sx={{ mt: 2 }}
-          onClick={() => window.location.reload()}
+          sx={{ mt: 2, borderRadius: 2 }}
+          onClick={fetchAccountDetails}
         >
           Retry
         </Button>
@@ -114,14 +96,15 @@ const AccountDetails: React.FC = () => {
     );
   }
 
+  const maskId = (id: string) => `****${id.slice(-4)}`;
+
   return (
-    <Box>
+    <Box sx={{ p: { xs: 1, md: 3 } }}>
       <Typography variant="h4" sx={{ mb: 4, fontWeight: "bold" }}>
         Account Details
       </Typography>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {/* Account Information Card */}
         <Box
           sx={{
             display: "grid",
@@ -154,7 +137,7 @@ const AccountDetails: React.FC = () => {
                     Account Holder
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {accountData.name}
+                    {accountData.name || "N/A"}
                   </Typography>
                 </Box>
                 <Box>
@@ -162,7 +145,7 @@ const AccountDetails: React.FC = () => {
                     Account Number
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {accountData.accountNumber}
+                    {maskId(accountData.accountId)}
                   </Typography>
                 </Box>
                 <Box>
@@ -178,15 +161,15 @@ const AccountDetails: React.FC = () => {
                     Opening Date
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {accountData.createdDate}
+                    {new Date(accountData.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
-                <Box>
+                <Box sx={{ gridColumn: { sm: "1 / span 2" } }}>
                   <Typography variant="body2" color="text.secondary">
                     Email
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {accountData.email}
+                    {accountData.email || "N/A"}
                   </Typography>
                 </Box>
                 <Box sx={{ gridColumn: { xs: "1", sm: "1 / span 2" } }}>
@@ -199,17 +182,16 @@ const AccountDetails: React.FC = () => {
                     fontWeight="bold"
                     color="primary.main"
                   >
-                    $
-                    {accountData.balance.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })}
+                    {new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: accountData.currency || "USD",
+                    }).format(accountData.balance)}
                   </Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
 
-          {/* Quick Actions Card */}
           <Card
             elevation={0}
             sx={{
@@ -233,7 +215,7 @@ const AccountDetails: React.FC = () => {
                 <Button
                   variant="contained"
                   fullWidth
-                  sx={{ py: 1.5 }}
+                  sx={{ py: 1.5, borderRadius: 2 }}
                   onClick={() => navigate("/transactions")}
                 >
                   Transfer Money
@@ -241,7 +223,7 @@ const AccountDetails: React.FC = () => {
                 <Button
                   variant="outlined"
                   fullWidth
-                  sx={{ py: 1.5 }}
+                  sx={{ py: 1.5, borderRadius: 2 }}
                   onClick={() => navigate("/transactions")}
                 >
                   Deposit Funds
@@ -249,7 +231,7 @@ const AccountDetails: React.FC = () => {
                 <Button
                   variant="outlined"
                   fullWidth
-                  sx={{ py: 1.5 }}
+                  sx={{ py: 1.5, borderRadius: 2 }}
                   onClick={() => navigate("/reports")}
                 >
                   View Reports
@@ -257,7 +239,7 @@ const AccountDetails: React.FC = () => {
                 <Button
                   variant="outlined"
                   fullWidth
-                  sx={{ py: 1.5 }}
+                  sx={{ py: 1.5, borderRadius: 2 }}
                   onClick={() => navigate("/savings")}
                 >
                   Savings Goals
@@ -267,7 +249,6 @@ const AccountDetails: React.FC = () => {
           </Card>
         </Box>
 
-        {/* Transaction History Card */}
         <Card
           elevation={0}
           sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}
@@ -275,93 +256,85 @@ const AccountDetails: React.FC = () => {
           <CardHeader
             title="Transaction History"
             titleTypographyProps={{ variant: "h6", fontWeight: "bold" }}
-            action={<Button color="primary">Download CSV</Button>}
+            action={
+              <Button color="primary" variant="text">
+                Download CSV
+              </Button>
+            }
           />
           <Divider />
-          <CardContent>
+          <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
             {transactions.length > 0 ? (
-              <TableContainer component={Paper} elevation={0}>
+              <TableContainer>
                 <Table sx={{ minWidth: 650 }}>
-                  <TableHead>
+                  <TableHead sx={{ bgcolor: "action.hover" }}>
                     <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Amount</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Description
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                        Amount
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {transactions.map((transaction: any) => (
-                      <TableRow
-                        key={transaction.transactionId}
-                        sx={{
-                          "&:last-child td, &:last-child th": { border: 0 },
-                        }}
-                      >
-                        <TableCell component="th" scope="row">
-                          {new Date(
-                            transaction.date || transaction.timestamp,
-                          ).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          {transaction.description ||
-                            `Transaction #${transaction.transactionId}`}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={transaction.transactionType}
-                            size="small"
-                            sx={{
-                              bgcolor:
-                                transaction.transactionType === "CREDIT"
-                                  ? theme.palette.success.light
-                                  : theme.palette.info.light,
-                              color:
-                                transaction.transactionType === "CREDIT"
-                                  ? theme.palette.success.dark
-                                  : theme.palette.info.dark,
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={transaction.status}
-                            size="small"
-                            sx={{
-                              bgcolor: theme.palette.success.light,
-                              color: theme.palette.success.dark,
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: "bold",
-                              color:
-                                transaction.transactionType === "CREDIT"
-                                  ? theme.palette.success.main
-                                  : theme.palette.error.main,
-                            }}
-                          >
-                            {transaction.transactionType === "CREDIT"
-                              ? "+"
-                              : "-"}
-                            $
-                            {Math.abs(transaction.amount).toLocaleString(
-                              "en-US",
-                              { minimumFractionDigits: 2 },
-                            )}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {transactions.map((transaction) => {
+                      const isCredit = transaction.transactionType === "CREDIT";
+                      return (
+                        <TableRow key={transaction.transactionId} hover>
+                          <TableCell>
+                            {new Date(transaction.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{transaction.description}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={transaction.transactionType}
+                              size="small"
+                              sx={{
+                                fontWeight: "bold",
+                                bgcolor: isCredit
+                                  ? "success.light"
+                                  : "info.light",
+                                color: isCredit ? "success.dark" : "info.dark",
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={transaction.status}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: "bold",
+                                color: isCredit ? "success.main" : "error.main",
+                              }}
+                            >
+                              {isCredit ? "+" : "-"}
+                              {Math.abs(transaction.amount).toLocaleString(
+                                "en-US",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
             ) : (
-              <Box sx={{ p: 3, textAlign: "center" }}>
+              <Box sx={{ p: 6, textAlign: "center" }}>
                 <Typography variant="body1" color="text.secondary">
                   No transactions found for this account.
                 </Typography>

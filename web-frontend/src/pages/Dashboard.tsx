@@ -1,5 +1,3 @@
-// Modern Dashboard component with enhanced UI
-
 import {
   AccountBalance as AccountIcon,
   Add as AddIcon,
@@ -44,12 +42,10 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Doughnut, Line } from "react-chartjs-2";
 import { useNavigate } from "react-router-dom";
-// Import custom components
 import GridCompatibility from "../components/GridCompatibility";
 import { useAuth } from "../context/AuthContext";
 import { accountAPI, savingsAPI, transactionAPI } from "../services/api";
 
-// Register ChartJS components
 ChartJS.register(
   ArcElement,
   Tooltip,
@@ -74,8 +70,8 @@ const Dashboard: React.FC = () => {
     accountType: "",
     accountId: "",
   });
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [savingsGoals, setSavingsGoals] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
@@ -84,10 +80,9 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch accounts
         const accountsResponse = await accountAPI.getAccounts();
         if (accountsResponse.data && accountsResponse.data.length > 0) {
-          const account = accountsResponse.data[0]; // Get first account
+          const account = accountsResponse.data[0];
           setAccountData({
             balance: account.balance,
             accountNumber: `****${String(account.accountId).slice(-4)}`,
@@ -96,13 +91,11 @@ const Dashboard: React.FC = () => {
           });
         }
 
-        // Fetch recent transactions
         const transactionsResponse = await transactionAPI.getTransactions({
           limit: 5,
         });
         setRecentTransactions(transactionsResponse.data || []);
 
-        // Fetch savings goals
         const savingsResponse = await savingsAPI.getSavingsGoals();
         setSavingsGoals(savingsResponse.data || []);
       } catch (err) {
@@ -116,7 +109,6 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  // Spending breakdown chart data
   const spendingData = {
     labels: ["Housing", "Food", "Transportation", "Entertainment", "Utilities"],
     datasets: [
@@ -157,7 +149,6 @@ const Dashboard: React.FC = () => {
     },
   };
 
-  // Monthly balance chart data
   const balanceData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     datasets: [
@@ -212,7 +203,6 @@ const Dashboard: React.FC = () => {
       y: {
         beginAtZero: false,
         grid: {
-          borderDash: [3, 3],
           color: theme.palette.divider,
         },
         ticks: {
@@ -266,7 +256,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      {/* Welcome Section */}
       <Box
         sx={{
           mb: 4,
@@ -307,9 +296,8 @@ const Dashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Stats Cards */}
       <GridCompatibility container spacing={3} sx={{ mb: 4 }}>
-        <GridCompatibility xs={12} sm={6} md={3}>
+        <GridCompatibility item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -383,7 +371,7 @@ const Dashboard: React.FC = () => {
           </Paper>
         </GridCompatibility>
 
-        <GridCompatibility xs={12} sm={6} md={3}>
+        <GridCompatibility item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -454,7 +442,7 @@ const Dashboard: React.FC = () => {
           </Paper>
         </GridCompatibility>
 
-        <GridCompatibility xs={12} sm={6} md={3}>
+        <GridCompatibility item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -525,7 +513,7 @@ const Dashboard: React.FC = () => {
           </Paper>
         </GridCompatibility>
 
-        <GridCompatibility xs={12} sm={6} md={3}>
+        <GridCompatibility item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -565,9 +553,7 @@ const Dashboard: React.FC = () => {
                   thickness={4}
                   sx={{
                     color: theme.palette.secondary.main,
-                    "& .MuiCircularProgress-circle": {
-                      strokeLinecap: "round",
-                    },
+                    "& .MuiCircularProgress-circle": { strokeLinecap: "round" },
                   }}
                 />
                 <Box
@@ -607,11 +593,8 @@ const Dashboard: React.FC = () => {
         </GridCompatibility>
       </GridCompatibility>
 
-      {/* Main Content */}
       <GridCompatibility container spacing={3}>
-        {/* Left Column */}
-        <GridCompatibility xs={12} md={8}>
-          {/* Account Overview */}
+        <GridCompatibility item xs={12} md={8}>
           <Paper
             elevation={0}
             sx={{
@@ -655,7 +638,6 @@ const Dashboard: React.FC = () => {
             </Box>
           </Paper>
 
-          {/* Tabs Section */}
           <Box sx={{ mb: 3 }}>
             <Tabs
               value={activeTab}
@@ -669,27 +651,10 @@ const Dashboard: React.FC = () => {
                 },
               }}
             >
-              <Tab
-                label="Recent Transactions"
-                sx={{
-                  fontWeight: 600,
-                  "&.Mui-selected": {
-                    color: theme.palette.primary.main,
-                  },
-                }}
-              />
-              <Tab
-                label="Spending Breakdown"
-                sx={{
-                  fontWeight: 600,
-                  "&.Mui-selected": {
-                    color: theme.palette.primary.main,
-                  },
-                }}
-              />
+              <Tab label="Recent Transactions" sx={{ fontWeight: 600 }} />
+              <Tab label="Spending Breakdown" sx={{ fontWeight: 600 }} />
             </Tabs>
 
-            {/* Recent Transactions Tab */}
             {activeTab === 0 && (
               <Paper
                 elevation={0}
@@ -718,7 +683,6 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </Box>
                 <Divider />
-
                 {recentTransactions.length > 0 ? (
                   <Box>
                     {recentTransactions.map((transaction: any) => (
@@ -727,9 +691,7 @@ const Dashboard: React.FC = () => {
                         sx={{
                           p: 2,
                           borderBottom: `1px solid ${theme.palette.divider}`,
-                          "&:last-child": {
-                            borderBottom: "none",
-                          },
+                          "&:last-child": { borderBottom: "none" },
                           "&:hover": {
                             bgcolor: "rgba(0, 0, 0, 0.01)",
                             cursor: "pointer",
@@ -830,7 +792,6 @@ const Dashboard: React.FC = () => {
               </Paper>
             )}
 
-            {/* Spending Breakdown Tab */}
             {activeTab === 1 && (
               <Paper
                 elevation={0}
@@ -841,7 +802,7 @@ const Dashboard: React.FC = () => {
                 }}
               >
                 <GridCompatibility container spacing={3}>
-                  <GridCompatibility xs={12} md={6}>
+                  <GridCompatibility item xs={12} md={6}>
                     <Typography
                       variant="subtitle1"
                       fontWeight={600}
@@ -869,8 +830,7 @@ const Dashboard: React.FC = () => {
                       </Box>
                     </Box>
                   </GridCompatibility>
-
-                  <GridCompatibility xs={12} md={6}>
+                  <GridCompatibility item xs={12} md={6}>
                     <Typography
                       variant="subtitle1"
                       fontWeight={600}
@@ -920,16 +880,13 @@ const Dashboard: React.FC = () => {
                             <Box
                               sx={{
                                 width: `${expense.percentage}%`,
-                                bgcolor:
-                                  index === 0
-                                    ? theme.palette.primary.main
-                                    : index === 1
-                                      ? theme.palette.secondary.main
-                                      : index === 2
-                                        ? theme.palette.success.main
-                                        : index === 3
-                                          ? theme.palette.warning.main
-                                          : theme.palette.info.main,
+                                bgcolor: [
+                                  theme.palette.primary.main,
+                                  theme.palette.secondary.main,
+                                  theme.palette.success.main,
+                                  theme.palette.warning.main,
+                                  theme.palette.info.main,
+                                ][index],
                                 height: "100%",
                                 borderRadius: 5,
                               }}
@@ -945,9 +902,7 @@ const Dashboard: React.FC = () => {
           </Box>
         </GridCompatibility>
 
-        {/* Right Column */}
-        <GridCompatibility xs={12} md={4}>
-          {/* Account Card */}
+        <GridCompatibility item xs={12} md={4}>
           <Paper
             elevation={0}
             sx={{
@@ -976,310 +931,36 @@ const Dashboard: React.FC = () => {
                   <AccountIcon />
                 </Box>
                 <Typography variant="h6" fontWeight={600}>
-                  Your Account
+                  Quick Actions
                 </Typography>
               </Box>
             </Box>
-
-            <Box sx={{ p: 3 }}>
-              <GridCompatibility container spacing={2} sx={{ mb: 3 }}>
-                <GridCompatibility xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Account Type
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {accountData.accountType}
-                  </Typography>
-                </GridCompatibility>
-                <GridCompatibility xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Account Number
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {accountData.accountNumber}
-                  </Typography>
-                </GridCompatibility>
-              </GridCompatibility>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => navigate(`/accounts/${accountData.accountId}`)}
-                >
-                  View Account Details
-                </Button>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => navigate("/transactions")}
-                >
-                  Make a Transfer
-                </Button>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* Savings Goals */}
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${theme.palette.divider}`,
-              mb: 3,
-            }}
-          >
             <Box
-              sx={{
-                p: 3,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
+              sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2 }}
             >
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: `${theme.palette.secondary.main}15`,
-                    color: theme.palette.secondary.main,
-                    mr: 2,
-                  }}
-                >
-                  <SavingsIcon />
-                </Box>
-                <Typography variant="h6" fontWeight={600}>
-                  Savings Goals
-                </Typography>
-              </Box>
               <Button
+                fullWidth
+                variant="contained"
                 startIcon={<AddIcon />}
-                size="small"
-                onClick={() => navigate("/savings")}
+                onClick={() => navigate("/transactions")}
               >
-                New Goal
+                Add Transaction
               </Button>
-            </Box>
-
-            <Box sx={{ p: 3 }}>
-              {savingsGoals.length > 0 ? (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  {savingsGoals.slice(0, 2).map((goal: any) => (
-                    <Box
-                      key={goal.goalId}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        border: `1px solid ${theme.palette.divider}`,
-                        "&:hover": {
-                          bgcolor: "rgba(0, 0, 0, 0.01)",
-                          cursor: "pointer",
-                        },
-                      }}
-                      onClick={() => navigate("/savings")}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          mb: 2,
-                        }}
-                      >
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <Box
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 2,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: `${theme.palette.secondary.main}15`,
-                              color: theme.palette.secondary.main,
-                              mr: 2,
-                              fontSize: "1.5rem",
-                            }}
-                          >
-                            {goal.category === "VACATION"
-                              ? "✈️"
-                              : goal.category === "HOME"
-                                ? "🏠"
-                                : goal.category === "CAR"
-                                  ? "🚗"
-                                  : goal.category === "EDUCATION"
-                                    ? "🎓"
-                                    : "💰"}
-                          </Box>
-                          <Typography variant="subtitle1" fontWeight={600}>
-                            {goal.goalName || goal.name}
-                          </Typography>
-                        </Box>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            bgcolor: `${theme.palette.secondary.main}15`,
-                            color: theme.palette.secondary.main,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {Math.round(
-                            (goal.currentAmount / goal.targetAmount) * 100,
-                          )}
-                          %
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ mb: 1 }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            mb: 0.5,
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            ${goal.currentAmount.toLocaleString()}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ${goal.targetAmount.toLocaleString()}
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            width: "100%",
-                            bgcolor: "rgba(0, 0, 0, 0.04)",
-                            borderRadius: 5,
-                            height: 6,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: `${Math.round((goal.currentAmount / goal.targetAmount) * 100)}%`,
-                              bgcolor: theme.palette.secondary.main,
-                              height: "100%",
-                              borderRadius: 5,
-                            }}
-                          />
-                        </Box>
-                      </Box>
-
-                      {goal.targetDate && (
-                        <Typography variant="caption" color="text.secondary">
-                          Target:{" "}
-                          {new Date(goal.targetDate).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )}
-                        </Typography>
-                      )}
-                    </Box>
-                  ))}
-
-                  {savingsGoals.length > 2 && (
-                    <Button
-                      variant="text"
-                      endIcon={<MoreHorizIcon />}
-                      onClick={() => navigate("/savings")}
-                      sx={{ alignSelf: "center", mt: 1 }}
-                    >
-                      View All Goals
-                    </Button>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ p: 2, textAlign: "center" }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No savings goals found.
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    sx={{ mt: 2 }}
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate("/savings")}
-                  >
-                    Create a Goal
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          </Paper>
-
-          {/* Quick Links */}
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            <Box
-              sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: `${theme.palette.primary.main}15`,
-                    color: theme.palette.primary.main,
-                    mr: 2,
-                  }}
-                >
-                  <TrendingUpIcon />
-                </Box>
-                <Typography variant="h6" fontWeight={600}>
-                  Quick Links
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ p: 3 }}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<AccountIcon />}
-                  onClick={() => navigate("/accounts/" + accountData.accountId)}
-                >
-                  Manage Cards
-                </Button>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<ReceiptIcon />}
-                  onClick={() => navigate("/transactions")}
-                >
-                  Pay Bills
-                </Button>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<ShowChartIcon />}
-                  onClick={() => navigate("/reports")}
-                >
-                  Notifications
-                </Button>
-              </Box>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<CreditCardIcon />}
+                onClick={() => navigate("/accounts/1")}
+              >
+                Manage Cards
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<NotificationsIcon />}
+              >
+                Set Alerts
+              </Button>
             </Box>
           </Paper>
         </GridCompatibility>

@@ -1,7 +1,7 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: "USER" | "ADMIN";
@@ -10,34 +10,29 @@ export interface User {
 
 export interface Account {
   accountId: string;
-  type: string;
-  accountType: string;
+  accountType: "CHECKING" | "SAVINGS" | "CREDIT" | "LOAN" | string;
   balance: number;
   currency: string;
   createdAt: string;
   name?: string;
   email?: string;
-  createdDate?: string;
 }
 
 export interface Transaction {
-  id?: number;
-  transactionId?: string;
-  type: string;
-  transactionType?: "CREDIT" | "DEBIT";
+  transactionId: string;
+  accountId: string;
+  transactionType: "CREDIT" | "DEBIT" | "TRANSFER";
   amount: number;
   description: string;
-  date?: string;
-  timestamp?: string;
-  accountId: string | number;
   category?: string;
-  status?: string;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  date: string;
   referenceNumber?: string;
-  currency?: string;
+  currency: string;
 }
 
 export interface Loan {
-  id: number;
+  loanId: string;
   loanAmount: number;
   loanType: string;
   interestRate: number;
@@ -45,25 +40,24 @@ export interface Loan {
   monthlyPayment: number;
   remainingAmount: number;
   status: "PENDING" | "APPROVED" | "REJECTED" | "PAID";
-  approvalDate: string;
-  nextPaymentDate: string;
+  approvalDate?: string;
+  nextPaymentDate?: string;
 }
 
 export interface SavingsGoal {
-  id: number;
-  goalId?: number;
+  goalId: string;
   goalName: string;
   targetAmount: number;
   currentAmount: number;
   targetDate: string;
-  createdAt?: string;
+  createdAt: string;
   description?: string;
-  status?: string;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED";
 }
 
 export interface Report {
-  id: number;
-  accountId?: number;
+  reportId: string;
+  accountId?: string;
   customerId?: string;
   reportType: string;
   details?: string;
@@ -74,17 +68,16 @@ export interface Report {
 }
 
 export interface CreateAccountData {
-  type: string;
+  accountType: string;
   currency: string;
 }
 
 export interface CreateTransactionData {
-  type: string;
+  type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER";
   amount: number;
   description: string;
-  accountId: string | number;
-  destinationAccountId?: number;
-  currency?: string;
+  accountId: string;
+  destinationAccountId?: string;
 }
 
 export interface CreateLoanData {
@@ -102,9 +95,8 @@ export interface CreateSavingsGoalData {
 
 export interface CreateReportData {
   reportType: string;
-  accountId?: number;
+  accountId?: string;
   customerId?: string;
-  requestedBy?: string;
 }
 
 const api = axios.create({
@@ -112,30 +104,32 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000,
 });
 
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = sessionStorage.getItem("token");
-    if (token) {
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   },
 );
 
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    if (error.response && error.response.status === 401) {
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
       sessionStorage.removeItem("token");
       sessionStorage.removeItem("user");
-      window.location.href = "/login";
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },
@@ -144,7 +138,7 @@ api.interceptors.response.use(
 export const accountAPI = {
   getAccounts: () => api.get<Account[]>("/accounts"),
 
-  getAccountDetails: (accountId: string | undefined) =>
+  getAccountDetails: (accountId: string) =>
     api.get<Account>(`/accounts/${accountId}`),
 
   createAccount: (data: CreateAccountData) =>
@@ -159,8 +153,8 @@ export const transactionAPI = {
     limit?: number;
   }) => api.get<Transaction[]>("/transactions", { params }),
 
-  getTransactionById: (id: number | string) =>
-    api.get<Transaction>(`/transactions/${id}`),
+  getTransactionById: (transactionId: string) =>
+    api.get<Transaction>(`/transactions/${transactionId}`),
 
   createTransaction: (data: CreateTransactionData) =>
     api.post<Transaction>("/transactions", data),
@@ -192,24 +186,23 @@ export const loanAPI = {
 export const savingsAPI = {
   getSavingsGoals: () => api.get<SavingsGoal[]>("/savings-goals"),
 
-  getSavingsGoalById: (goalId: string | number) =>
+  getSavingsGoalById: (goalId: string) =>
     api.get<SavingsGoal>(`/savings-goals/${goalId}`),
 
   createSavingsGoal: (data: CreateSavingsGoalData) =>
     api.post<SavingsGoal>("/savings-goals", data),
 
-  updateSavingsGoal: (goalId: number, data: Partial<CreateSavingsGoalData>) =>
+  updateSavingsGoal: (goalId: string, data: Partial<CreateSavingsGoalData>) =>
     api.put<SavingsGoal>(`/savings-goals/${goalId}`, data),
 
-  deleteSavingsGoal: (goalId: number) =>
+  deleteSavingsGoal: (goalId: string) =>
     api.delete<void>(`/savings-goals/${goalId}`),
 };
 
 export const reportAPI = {
   getReports: () => api.get<Report[]>("/reports"),
 
-  getReportById: (reportId: number | string) =>
-    api.get<Report>(`/reports/${reportId}`),
+  getReportById: (reportId: string) => api.get<Report>(`/reports/${reportId}`),
 
   createReport: (data: CreateReportData) => api.post<Report>("/reports", data),
 };
