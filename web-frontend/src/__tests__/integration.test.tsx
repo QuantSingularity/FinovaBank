@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BrowserRouter } from "react-router-dom";
-import React from "react";
 import App from "../App";
 
 jest.mock("../context/AuthContext", () => ({
@@ -16,11 +15,12 @@ jest.mock("../context/AuthContext", () => ({
     register: jest.fn(),
     loading: false,
     error: null,
+    clearError: jest.fn(),
   }),
 }));
 
-describe("Integration Tests", () => {
-  test("renders login page when not authenticated", async () => {
+describe("App Integration Tests", () => {
+  test("unauthenticated user sees login page at root", async () => {
     render(
       <BrowserRouter>
         <App />
@@ -31,38 +31,35 @@ describe("Integration Tests", () => {
     });
   });
 
-  test("renders application without crashing", () => {
-    const { container } = render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>,
-    );
-    expect(container).toBeInTheDocument();
-  });
-
-  test("renders the sign in button on login page", async () => {
+  test("login page has link to register", async () => {
     render(
       <BrowserRouter>
         <App />
       </BrowserRouter>,
     );
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /Sign In/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
     });
   });
 
-  test("renders link to register page", async () => {
+  test("login page has forgot password link", async () => {
     render(
       <BrowserRouter>
         <App />
       </BrowserRouter>,
     );
     await waitFor(() => {
-      expect(
-        screen.getByRole("link", { name: /Sign Up/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Forgot password/i)).toBeInTheDocument();
     });
+  });
+
+  test("app renders without throwing", () => {
+    expect(() =>
+      render(
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>,
+      ),
+    ).not.toThrow();
   });
 });

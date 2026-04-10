@@ -6,7 +6,7 @@ import Dashboard from "../Dashboard";
 jest.mock("../../context/AuthContext", () => ({
   useAuth: () => ({
     user: {
-      id: 1,
+      id: "1",
       name: "Test User",
       email: "test@example.com",
       role: "USER",
@@ -41,22 +41,15 @@ jest.mock("../../services/api", () => ({
           transactionType: "DEBIT",
           date: "2025-01-01",
           category: "Shopping",
+          status: "COMPLETED",
+          accountId: "ACC001",
+          currency: "USD",
         },
       ],
     }),
   },
   savingsAPI: {
-    getSavingsGoals: jest.fn().mockResolvedValue({
-      data: [
-        {
-          id: 1,
-          goalName: "Vacation",
-          targetAmount: 5000,
-          currentAmount: 2500,
-          targetDate: "2025-12-31",
-        },
-      ],
-    }),
+    getSavingsGoals: jest.fn().mockResolvedValue({ data: [] }),
   },
 }));
 
@@ -73,10 +66,10 @@ describe("Dashboard Page", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  test("renders welcome message with user name after load", async () => {
+  test("renders welcome message with user first name after load", async () => {
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText(/Welcome back, Test User/i)).toBeInTheDocument();
+      expect(screen.getByText(/Welcome back, Test/i)).toBeInTheDocument();
     });
   });
 
@@ -94,7 +87,7 @@ describe("Dashboard Page", () => {
     });
   });
 
-  test("renders recent transactions section", async () => {
+  test("renders recent transactions tab", async () => {
     renderDashboard();
     await waitFor(() => {
       expect(screen.getByText(/Recent Transactions/i)).toBeInTheDocument();
@@ -108,17 +101,25 @@ describe("Dashboard Page", () => {
     });
   });
 
-  test("renders savings goals section", async () => {
+  test("renders monthly income and expense cards", async () => {
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText(/Savings Goals/i)).toBeInTheDocument();
+      expect(screen.getByText(/Monthly Income/i)).toBeInTheDocument();
+      expect(screen.getByText(/Monthly Expenses/i)).toBeInTheDocument();
     });
   });
 
-  test("renders savings goal name", async () => {
+  test("renders savings progress card", async () => {
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText("Vacation")).toBeInTheDocument();
+      expect(screen.getByText(/Savings Progress/i)).toBeInTheDocument();
+    });
+  });
+
+  test("renders quick actions panel", async () => {
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByText(/Quick Actions/i)).toBeInTheDocument();
     });
   });
 });

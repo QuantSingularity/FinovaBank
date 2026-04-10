@@ -11,6 +11,7 @@ import {
   MoreVert as MoreVertIcon,
   Receipt as ReceiptIcon,
   Search as SearchIcon,
+  SwapHoriz as SwapHorizIcon,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -34,6 +35,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Tab,
   Tabs,
   TextField,
@@ -41,15 +43,12 @@ import {
   useTheme,
 } from "@mui/material";
 import type React from "react";
-import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-// Ensure GridCompatibility is imported correctly
+import { useCallback, useEffect, useState } from "react";
 import GridCompatibility from "../components/GridCompatibility";
 import { transactionAPI, type Transaction } from "../services/api";
 
 const Transactions: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,9 +67,18 @@ const Transactions: React.FC = () => {
     description: "",
     accountId: "",
   });
-
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
+  const showSnackbar = (
+    message: string,
+    severity: "success" | "error" = "success",
+  ) => setSnackbar({ open: true, message, severity });
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -78,8 +86,7 @@ const Transactions: React.FC = () => {
       setError(null);
       const response = await transactionAPI.getTransactions();
       setTransactions(response.data || []);
-    } catch (err) {
-      console.error("Error fetching transactions:", err);
+    } catch {
       setError("Failed to load transactions. Please try again later.");
     } finally {
       setLoading(false);
@@ -90,8 +97,63 @@ const Transactions: React.FC = () => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
+  const filteredTransactions = transactions.filter((t) => {
+    if (activeTab === 1 && t.transactionType !== "CREDIT") return false;
+    if (activeTab === 2 && t.transactionType !== "DEBIT") return false;
+    if (activeTab === 3 && t.transactionType !== "TRANSFER") return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        t.description?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q) ||
+        t.amount?.toString().includes(q) ||
+        t.transactionId?.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const handleTransferSubmit = async () => {
+    if (
+      !transferForm.amount ||
+      !transferForm.description ||
+      !transferForm.accountId
+    ) {
+      setTransferError("Please fill in all required fields");
+      return;
+    }
+    const amount = parseFloat(transferForm.amount);
+    if (isNaN(amount) || amount <= 0) {
+      setTransferError("Please enter a valid amount greater than 0");
+      return;
+    }
+    try {
+      setTransferLoading(true);
+      setTransferError(null);
+      const response = await transactionAPI.createTransaction({
+        type: transferForm.type as "DEPOSIT" | "WITHDRAWAL" | "TRANSFER",
+        amount,
+        description: transferForm.description,
+        accountId: transferForm.accountId,
+      });
+      if (response.data) {
+        setTransactions((prev) => [response.data, ...prev]);
+      }
+      setShowTransferDialog(false);
+      setTransferForm({
+        type: "DEPOSIT",
+        amount: "",
+        description: "",
+        accountId: "",
+      });
+      showSnackbar("Transaction submitted successfully!");
+    } catch (err: any) {
+      setTransferError(
+        err.response?.data?.message || "Transaction failed. Please try again.",
+      );
+    } finally {
+      setTransferLoading(false);
+    }
   };
 
   const handleMenuOpen = (
@@ -107,63 +169,30 @@ const Transactions: React.FC = () => {
     setSelectedTransaction(null);
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    // Filter by tab
-    if (activeTab === 1 && transaction.transactionType !== "CREDIT")
-      return false;
-    if (activeTab === 2 && transaction.transactionType !== "DEBIT")
-      return false;
+  const getTransactionIcon = (type: string) => {
+    if (type === "CREDIT") return <ArrowUpwardIcon />;
+    if (type === "TRANSFER") return <SwapHorizIcon />;
+    return <ArrowDownwardIcon />;
+  };
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        transaction.description?.toLowerCase().includes(query) ||
-        transaction.category?.toLowerCase().includes(query) ||
-        transaction.amount?.toString().includes(query)
-      );
-    }
-
-    return true;
-  });
-
-  const handleTransferSubmit = async () => {
-    if (
-      !transferForm.amount ||
-      !transferForm.description ||
-      !transferForm.accountId
-    ) {
-      setTransferError("Please fill in all required fields");
-      return;
-    }
-    try {
-      setTransferLoading(true);
-      setTransferError(null);
-      const response = await transactionAPI.createTransaction({
-        type: transferForm.type,
-        amount: parseFloat(transferForm.amount),
-        description: transferForm.description,
-        accountId: transferForm.accountId,
-      });
-
-      if (response.data) {
-        setTransactions((prev) => [response.data, ...prev]);
-      }
-
-      setShowTransferDialog(false);
-      setTransferForm({
-        type: "DEPOSIT",
-        amount: "",
-        description: "",
-        accountId: "",
-      });
-    } catch (err: any) {
-      setTransferError(
-        err.response?.data?.message || "Transaction failed. Please try again.",
-      );
-    } finally {
-      setTransferLoading(false);
-    }
+  const getStatusChip = (status: string) => {
+    const configs: Record<
+      string,
+      { color: "success" | "warning" | "error" | "default" }
+    > = {
+      COMPLETED: { color: "success" },
+      PENDING: { color: "warning" },
+      FAILED: { color: "error" },
+    };
+    return (
+      <Chip
+        label={status}
+        size="small"
+        color={configs[status]?.color ?? "default"}
+        variant="outlined"
+        sx={{ fontSize: "0.7rem", height: 22 }}
+      />
+    );
   };
 
   if (loading) {
@@ -173,7 +202,7 @@ const Transactions: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "80vh",
+          height: "70vh",
         }}
       >
         <CircularProgress />
@@ -181,16 +210,24 @@ const Transactions: React.FC = () => {
     );
   }
 
+  const totalIncome = transactions
+    .filter((t) => t.transactionType === "CREDIT")
+    .reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = transactions
+    .filter((t) => t.transactionType === "DEBIT")
+    .reduce((s, t) => s + t.amount, 0);
+
   return (
     <Box>
-      {/* Header Section */}
+      {/* Header */}
       <Box
         sx={{
           mb: 4,
-          p: 4,
-          borderRadius: 3,
+          p: { xs: 3, md: 4 },
+          borderRadius: 4,
           background:
-            "linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)",
+            "linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(124,58,237,0.08) 100%)",
+          border: `1px solid ${theme.palette.divider}`,
           display: "flex",
           flexDirection: { xs: "column", md: "row" },
           alignItems: { xs: "flex-start", md: "center" },
@@ -199,7 +236,7 @@ const Transactions: React.FC = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
             Transactions
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -212,7 +249,7 @@ const Transactions: React.FC = () => {
             startIcon={<AttachMoneyIcon />}
             onClick={() => setShowTransferDialog(true)}
           >
-            New Transfer
+            New Transaction
           </Button>
           <Button variant="outlined" startIcon={<DownloadIcon />}>
             Export
@@ -220,17 +257,70 @@ const Transactions: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Summary Cards */}
+      <GridCompatibility container spacing={2} sx={{ mb: 3 }}>
+        {[
+          {
+            label: "Total Transactions",
+            value: transactions.length.toString(),
+            color: theme.palette.primary.main,
+          },
+          {
+            label: "Total Income",
+            value: `$${totalIncome.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+            color: theme.palette.success.main,
+          },
+          {
+            label: "Total Expenses",
+            value: `$${totalExpenses.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+            color: theme.palette.error.main,
+          },
+          {
+            label: "Net Flow",
+            value: `${totalIncome - totalExpenses >= 0 ? "+" : ""}$${Math.abs(totalIncome - totalExpenses).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+            color:
+              totalIncome >= totalExpenses
+                ? theme.palette.success.main
+                : theme.palette.error.main,
+          },
+        ].map((stat) => (
+          <GridCompatibility item xs={6} md={3} key={stat.label}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                border: `1px solid ${theme.palette.divider}`,
+                textAlign: "center",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                sx={{ mb: 0.5 }}
+              >
+                {stat.label}
+              </Typography>
+              <Typography variant="h6" fontWeight={700} color={stat.color}>
+                {stat.value}
+              </Typography>
+            </Paper>
+          </GridCompatibility>
+        ))}
+      </GridCompatibility>
+
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={fetchTransactions}>
+              Retry
+            </Button>
+          }
+        >
           {error}
-          <Button
-            color="inherit"
-            size="small"
-            onClick={fetchTransactions}
-            sx={{ ml: 2 }}
-          >
-            Retry
-          </Button>
         </Alert>
       )}
 
@@ -238,18 +328,17 @@ const Transactions: React.FC = () => {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: 2.5,
           borderRadius: 3,
           border: `1px solid ${theme.palette.divider}`,
-          mb: 3,
+          mb: 2,
         }}
       >
-        {/* Fixed GridCompatibility props: Using item and container correctly */}
-        <GridCompatibility container spacing={3}>
+        <GridCompatibility container spacing={2} alignItems="center">
           <GridCompatibility item xs={12} md={6}>
             <TextField
               fullWidth
-              placeholder="Search transactions..."
+              placeholder="Search by description, category, or amount..."
               variant="outlined"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -267,21 +356,21 @@ const Transactions: React.FC = () => {
             <Box
               sx={{
                 display: "flex",
-                gap: 2,
+                gap: 1.5,
                 justifyContent: { xs: "flex-start", md: "flex-end" },
               }}
             >
               <Button
                 variant="outlined"
                 startIcon={<DateRangeIcon />}
-                size="medium"
+                size="small"
               >
                 Date Range
               </Button>
               <Button
                 variant="outlined"
                 startIcon={<FilterListIcon />}
-                size="medium"
+                size="small"
               >
                 Filters
               </Button>
@@ -291,24 +380,28 @@ const Transactions: React.FC = () => {
       </Paper>
 
       {/* Tabs */}
-      <Box sx={{ mb: 3 }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          sx={{
-            mb: 2,
-            "& .MuiTabs-indicator": {
-              backgroundColor: theme.palette.primary.main,
-              height: 3,
-              borderRadius: "3px 3px 0 0",
-            },
-          }}
-        >
-          <Tab label="All Transactions" sx={{ fontWeight: 600 }} />
-          <Tab label="Income" sx={{ fontWeight: 600 }} />
-          <Tab label="Expenses" sx={{ fontWeight: 600 }} />
-        </Tabs>
-      </Box>
+      <Tabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        sx={{
+          mb: 2,
+          "& .MuiTabs-indicator": { height: 3, borderRadius: "3px 3px 0 0" },
+        }}
+      >
+        <Tab label={`All (${transactions.length})`} sx={{ fontWeight: 500 }} />
+        <Tab
+          label={`Income (${transactions.filter((t) => t.transactionType === "CREDIT").length})`}
+          sx={{ fontWeight: 500 }}
+        />
+        <Tab
+          label={`Expenses (${transactions.filter((t) => t.transactionType === "DEBIT").length})`}
+          sx={{ fontWeight: 500 }}
+        />
+        <Tab
+          label={`Transfers (${transactions.filter((t) => t.transactionType === "TRANSFER").length})`}
+          sx={{ fontWeight: 500 }}
+        />
+      </Tabs>
 
       {/* Transaction List */}
       <Paper
@@ -319,132 +412,136 @@ const Transactions: React.FC = () => {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Box
+          sx={{ p: 2.5, borderBottom: `1px solid ${theme.palette.divider}` }}
+        >
           <Typography variant="subtitle1" fontWeight={600}>
-            {activeTab === 0
-              ? "All Transactions"
-              : activeTab === 1
-                ? "Income"
-                : "Expenses"}
-            {filteredTransactions.length > 0 && (
-              <Typography
-                component="span"
-                color="text.secondary"
-                sx={{ ml: 1, fontWeight: 400 }}
-              >
-                ({filteredTransactions.length})
-              </Typography>
-            )}
+            {filteredTransactions.length} transaction
+            {filteredTransactions.length !== 1 ? "s" : ""}
+            {searchQuery && ` matching "${searchQuery}"`}
           </Typography>
         </Box>
 
         {filteredTransactions.length > 0 ? (
-          <Box>
-            {filteredTransactions.map((transaction) => (
-              <Box
-                key={transaction.transactionId}
-                sx={{
-                  p: 3,
-                  borderBottom: `1px solid ${theme.palette.divider}`,
-                  "&:last-child": { borderBottom: "none" },
-                  "&:hover": { bgcolor: "rgba(0, 0, 0, 0.01)" },
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Avatar
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      bgcolor:
-                        transaction.transactionType === "CREDIT"
-                          ? `${theme.palette.success.main}15`
-                          : `${theme.palette.error.main}15`,
-                      color:
-                        transaction.transactionType === "CREDIT"
-                          ? theme.palette.success.main
+          filteredTransactions.map((transaction) => (
+            <Box
+              key={transaction.transactionId}
+              sx={{
+                px: 2.5,
+                py: 2,
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                "&:last-child": { borderBottom: "none" },
+                "&:hover": { bgcolor: "rgba(0,0,0,0.01)" },
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+                <Avatar
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    bgcolor:
+                      transaction.transactionType === "CREDIT"
+                        ? `${theme.palette.success.main}14`
+                        : transaction.transactionType === "TRANSFER"
+                          ? `${theme.palette.info.main}14`
+                          : `${theme.palette.error.main}14`,
+                    color:
+                      transaction.transactionType === "CREDIT"
+                        ? theme.palette.success.main
+                        : transaction.transactionType === "TRANSFER"
+                          ? theme.palette.info.main
                           : theme.palette.error.main,
-                      mr: 2,
+                    mr: 2,
+                    flexShrink: 0,
+                  }}
+                >
+                  {getTransactionIcon(transaction.transactionType)}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={600} noWrap>
+                    {transaction.description ||
+                      `Transaction #${transaction.transactionId}`}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mt: 0.4,
+                      flexWrap: "wrap",
                     }}
                   >
-                    {transaction.transactionType === "CREDIT" ? (
-                      <ArrowUpwardIcon />
-                    ) : (
-                      <ArrowDownwardIcon />
-                    )}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {transaction.description ||
-                        `Transaction #${transaction.transactionId}`}
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(transaction.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </Typography>
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", mt: 0.5 }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(
-                          transaction.date || transaction.timestamp || "",
-                        ).toLocaleDateString()}
-                      </Typography>
-                      {transaction.category && (
-                        <>
-                          <Box
-                            sx={{
-                              width: 4,
-                              height: 4,
-                              borderRadius: "50%",
-                              bgcolor: "text.secondary",
-                              mx: 1,
-                            }}
-                          />
-                          <Chip
-                            label={transaction.category}
-                            size="small"
-                            sx={{
-                              height: 24,
-                              fontSize: "0.75rem",
-                              bgcolor: "rgba(0, 0, 0, 0.04)",
-                              color: "text.secondary",
-                            }}
-                          />
-                        </>
-                      )}
-                    </Box>
+                    {transaction.category && (
+                      <Chip
+                        label={transaction.category}
+                        size="small"
+                        sx={{ height: 20, fontSize: "0.7rem" }}
+                      />
+                    )}
+                    {getStatusChip(transaction.status)}
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight={600}
-                    color={
-                      transaction.transactionType === "CREDIT"
-                        ? "success.main"
-                        : "error.main"
-                    }
-                    sx={{ mr: 2 }}
-                  >
-                    {transaction.transactionType === "CREDIT" ? "+" : "-"}$
-                    {Math.abs(transaction.amount || 0).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleMenuOpen(e, transaction)}
-                  >
-                    <MoreVertIcon />
-                  </IconButton>
-                </Box>
               </Box>
-            ))}
-          </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  ml: 2,
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color={
+                    transaction.transactionType === "CREDIT"
+                      ? "success.main"
+                      : "error.main"
+                  }
+                  sx={{ mr: 1.5 }}
+                >
+                  {transaction.transactionType === "CREDIT" ? "+" : "-"}$
+                  {Math.abs(transaction.amount).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={(e) => handleMenuOpen(e, transaction)}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+          ))
         ) : (
-          <Box sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="body1" color="text.secondary">
-              No transactions match your search criteria.
+          <Box sx={{ p: 6, textAlign: "center" }}>
+            <ReceiptIcon sx={{ fontSize: 56, color: "text.disabled", mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              {searchQuery
+                ? "No transactions match your search"
+                : "No transactions found"}
             </Typography>
+            {!searchQuery && (
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setShowTransferDialog(true)}
+                sx={{ mt: 1 }}
+              >
+                Add First Transaction
+              </Button>
+            )}
           </Box>
         )}
       </Paper>
@@ -456,26 +553,26 @@ const Transactions: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>New Transaction</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>New Transaction</DialogTitle>
         <DialogContent>
           {transferError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {transferError}
             </Alert>
           )}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel>Type</InputLabel>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Transaction Type</InputLabel>
               <Select
                 value={transferForm.type}
-                label="Type"
+                label="Transaction Type"
                 onChange={(e) =>
                   setTransferForm({ ...transferForm, type: e.target.value })
                 }
               >
-                <MenuItem value="DEPOSIT">Deposit</MenuItem>
-                <MenuItem value="WITHDRAWAL">Withdrawal</MenuItem>
-                <MenuItem value="TRANSFER">Transfer</MenuItem>
+                <MenuItem value="DEPOSIT">💰 Deposit</MenuItem>
+                <MenuItem value="WITHDRAWAL">💸 Withdrawal</MenuItem>
+                <MenuItem value="TRANSFER">🔁 Transfer</MenuItem>
               </Select>
             </FormControl>
             <TextField
@@ -485,15 +582,21 @@ const Transactions: React.FC = () => {
                 setTransferForm({ ...transferForm, accountId: e.target.value })
               }
               fullWidth
+              margin="normal"
+              placeholder="Enter your account ID"
+              required
             />
             <TextField
               label="Amount ($)"
               type="number"
+              inputProps={{ min: 0.01, step: 0.01 }}
               value={transferForm.amount}
               onChange={(e) =>
                 setTransferForm({ ...transferForm, amount: e.target.value })
               }
               fullWidth
+              margin="normal"
+              required
             />
             <TextField
               label="Description"
@@ -505,13 +608,21 @@ const Transactions: React.FC = () => {
                 })
               }
               fullWidth
+              margin="normal"
               multiline
               rows={2}
+              placeholder="What's this transaction for?"
+              required
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setShowTransferDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowTransferDialog(false)}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleTransferSubmit}
@@ -529,13 +640,15 @@ const Transactions: React.FC = () => {
         onClose={handleMenuClose}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 160,
+            border: `1px solid ${theme.palette.divider}`,
+          },
+        }}
       >
-        <MenuItem
-          onClick={() => {
-            handleMenuClose();
-            navigate(`/transactions/${selectedTransaction?.transactionId}`);
-          }}
-        >
+        <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
             <ReceiptIcon fontSize="small" />
           </ListItemIcon>
@@ -555,6 +668,21 @@ const Transactions: React.FC = () => {
           <ListItemText>Delete</ListItemText>
         </MenuItem>
       </Menu>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          sx={{ borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

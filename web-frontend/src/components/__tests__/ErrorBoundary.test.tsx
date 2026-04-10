@@ -2,55 +2,51 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ErrorBoundary from "../ErrorBoundary";
 
-const ThrowingComponent: React.FC<{ shouldThrow?: boolean }> = ({
-  shouldThrow = true,
-}) => {
-  if (shouldThrow) {
-    throw new Error("Test error message");
-  }
+const ThrowError: React.FC<{ shouldThrow: boolean }> = ({ shouldThrow }) => {
+  if (shouldThrow) throw new Error("Test error");
   return <div>Normal content</div>;
 };
 
 describe("ErrorBoundary", () => {
+  let consoleSpy: jest.SpyInstance;
   beforeEach(() => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   });
-
   afterEach(() => {
-    (console.error as jest.Mock).mockRestore();
+    consoleSpy.mockRestore();
   });
 
-  test("renders children when no error occurs", () => {
+  test("renders children when no error", () => {
     render(
       <ErrorBoundary>
-        <div>Safe Content</div>
+        <ThrowError shouldThrow={false} />
       </ErrorBoundary>,
     );
-    expect(screen.getByText("Safe Content")).toBeInTheDocument();
+    expect(screen.getByText("Normal content")).toBeInTheDocument();
   });
 
-  test("renders error UI when a child throws", () => {
+  test("renders error UI when child throws", () => {
     render(
       <ErrorBoundary>
-        <ThrowingComponent />
+        <ThrowError shouldThrow={true} />
       </ErrorBoundary>,
     );
     expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
   });
 
-  test("displays the error message", () => {
+  test("shows error message in error UI", () => {
     render(
       <ErrorBoundary>
-        <ThrowingComponent />
+        <ThrowError shouldThrow={true} />
       </ErrorBoundary>,
     );
-    expect(screen.getByText("Test error message")).toBeInTheDocument();
+    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
   });
 
-  test("renders a Refresh Page button", () => {
+  test("shows refresh button in error state", () => {
     render(
       <ErrorBoundary>
-        <ThrowingComponent />
+        <ThrowError shouldThrow={true} />
       </ErrorBoundary>,
     );
     expect(

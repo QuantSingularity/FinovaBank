@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 
@@ -14,6 +15,7 @@ jest.mock("./context/AuthContext", () => ({
     register: jest.fn(),
     loading: false,
     error: null,
+    clearError: jest.fn(),
   }),
 }));
 
@@ -27,7 +29,7 @@ describe("App", () => {
     expect(container).toBeInTheDocument();
   });
 
-  test("redirects to login when not authenticated", async () => {
+  test("redirects to login page when not authenticated", async () => {
     render(
       <BrowserRouter>
         <App />

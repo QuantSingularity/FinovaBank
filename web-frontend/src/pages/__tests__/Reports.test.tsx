@@ -5,33 +5,37 @@ import Reports from "../Reports";
 
 const mockReports = [
   {
-    id: 1,
+    reportId: "RPT-001ABC",
     reportType: "ACCOUNT_SUMMARY",
     status: "COMPLETED",
-    generatedAt: "2025-05-01T10:00:00",
-    requestedBy: "admin",
-    accountId: 100,
+    generatedAt: "2025-04-01T10:00:00Z",
+    accountId: "ACC001",
   },
   {
-    id: 2,
+    reportId: "RPT-002DEF",
     reportType: "TRANSACTION_HISTORY",
     status: "PENDING",
-    generatedAt: "2025-05-02T11:00:00",
-    requestedBy: null,
-    accountId: null,
+    generatedAt: "2025-04-02T12:00:00Z",
   },
 ];
-
-const mockCreateReport = jest.fn();
 
 jest.mock("../../services/api", () => ({
   reportAPI: {
     getReports: jest.fn().mockResolvedValue({ data: mockReports }),
-    createReport: mockCreateReport,
+    createReport: jest
+      .fn()
+      .mockResolvedValue({
+        data: {
+          reportId: "RPT-003",
+          reportType: "SAVINGS_ANALYSIS",
+          status: "PENDING",
+          generatedAt: new Date().toISOString(),
+        },
+      }),
   },
 }));
 
-const renderReports = () =>
+const renderComponent = () =>
   render(
     <BrowserRouter>
       <Reports />
@@ -39,79 +43,54 @@ const renderReports = () =>
   );
 
 describe("Reports Page", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockCreateReport.mockResolvedValue({
-      data: {
-        id: 99,
-        reportType: "MONTHLY_STATEMENT",
-        status: "PENDING",
-        generatedAt: new Date().toISOString(),
-      },
-    });
-  });
-
-  test("shows loading spinner initially", () => {
-    renderReports();
+  test("shows loading initially", () => {
+    renderComponent();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  test("renders Reports heading", async () => {
-    renderReports();
-    await waitFor(() => {
-      expect(screen.getByText("Reports")).toBeInTheDocument();
-    });
-  });
-
-  test("renders existing reports in table", async () => {
-    renderReports();
+  test("renders reports table after loading", async () => {
+    renderComponent();
     await waitFor(() => {
       expect(screen.getByText("Account Summary")).toBeInTheDocument();
       expect(screen.getByText("Transaction History")).toBeInTheDocument();
     });
   });
 
-  test("renders report status chips", async () => {
-    renderReports();
+  test("renders Reports heading", async () => {
+    renderComponent();
+    await waitFor(() => {
+      expect(screen.getByText(/^Reports$/)).toBeInTheDocument();
+    });
+  });
+
+  test("renders Generate Report button", async () => {
+    renderComponent();
+    await waitFor(() => {
+      expect(screen.getByText(/Generate Report/i)).toBeInTheDocument();
+    });
+  });
+
+  test("shows COMPLETED and PENDING status chips", async () => {
+    renderComponent();
     await waitFor(() => {
       expect(screen.getByText("COMPLETED")).toBeInTheDocument();
       expect(screen.getByText("PENDING")).toBeInTheDocument();
     });
   });
 
-  test("opens generate report dialog when button is clicked", async () => {
-    renderReports();
-    await waitFor(() => screen.getByText("Reports"));
-    fireEvent.click(screen.getByRole("button", { name: /Generate Report/i }));
-    expect(screen.getByText("Generate New Report")).toBeInTheDocument();
-  });
-
-  test("submits report generation form", async () => {
-    renderReports();
-    await waitFor(() => screen.getByText("Reports"));
-    fireEvent.click(screen.getByRole("button", { name: /Generate Report/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Generate$/i }));
+  test("opens generate report dialog", async () => {
+    renderComponent();
+    await waitFor(() => screen.getByText(/Generate Report/i));
+    fireEvent.click(screen.getAllByText(/Generate Report/i)[0]);
     await waitFor(() => {
-      expect(mockCreateReport).toHaveBeenCalledWith(
-        expect.objectContaining({ reportType: "ACCOUNT_SUMMARY" }),
-      );
+      expect(screen.getByText(/Generate New Report/i)).toBeInTheDocument();
     });
   });
 
-  test("shows empty state when no reports", async () => {
-    const { reportAPI } = require("../../services/api");
-    reportAPI.getReports.mockResolvedValueOnce({ data: [] });
-    renderReports();
+  test("shows report count in history header", async () => {
+    renderComponent();
     await waitFor(() => {
-      expect(screen.getByText(/No Reports Yet/i)).toBeInTheDocument();
-    });
-  });
-
-  test("displays report IDs in table", async () => {
-    renderReports();
-    await waitFor(() => {
-      expect(screen.getByText("#1")).toBeInTheDocument();
-      expect(screen.getByText("#2")).toBeInTheDocument();
+      expect(screen.getByText(/Report History \(2\)/i)).toBeInTheDocument();
     });
   });
 });

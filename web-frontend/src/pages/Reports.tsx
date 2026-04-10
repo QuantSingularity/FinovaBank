@@ -2,8 +2,10 @@ import {
   Add as AddIcon,
   Assessment as AssessmentIcon,
   CheckCircle as CheckCircleIcon,
+  Download as DownloadIcon,
   Error as ErrorIcon,
   HourglassEmpty as PendingIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -19,6 +21,7 @@ import {
   DialogTitle,
   MenuItem,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -30,16 +33,40 @@ import {
   useTheme,
 } from "@mui/material";
 import type React from "react";
-import { useEffect, useState } from "react";
-import { reportAPI, type Report } from "../services/api";
+import { useCallback, useEffect, useState } from "react";
+import { reportAPI, type CreateReportData, type Report } from "../services/api";
 
 const REPORT_TYPES = [
-  { value: "ACCOUNT_SUMMARY", label: "Account Summary" },
-  { value: "TRANSACTION_HISTORY", label: "Transaction History" },
-  { value: "SAVINGS_ANALYSIS", label: "Savings Analysis" },
-  { value: "LOAN_SUMMARY", label: "Loan Summary" },
-  { value: "MONTHLY_STATEMENT", label: "Monthly Statement" },
-  { value: "ANNUAL_REPORT", label: "Annual Report" },
+  {
+    value: "ACCOUNT_SUMMARY",
+    label: "Account Summary",
+    description: "Overview of all your accounts",
+  },
+  {
+    value: "TRANSACTION_HISTORY",
+    label: "Transaction History",
+    description: "Detailed list of all transactions",
+  },
+  {
+    value: "SAVINGS_ANALYSIS",
+    label: "Savings Analysis",
+    description: "Progress toward savings goals",
+  },
+  {
+    value: "LOAN_SUMMARY",
+    label: "Loan Summary",
+    description: "Active loans and repayment status",
+  },
+  {
+    value: "MONTHLY_STATEMENT",
+    label: "Monthly Statement",
+    description: "Monthly income and expense summary",
+  },
+  {
+    value: "ANNUAL_REPORT",
+    label: "Annual Report",
+    description: "Yearly financial overview",
+  },
 ];
 
 const Reports: React.FC = () => {
@@ -50,29 +77,39 @@ const Reports: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [formValues, setFormValues] = useState({
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
+  const [formValues, setFormValues] = useState<CreateReportData>({
     reportType: "ACCOUNT_SUMMARY",
     accountId: "",
     requestedBy: "",
   });
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  const showSnackbar = (
+    message: string,
+    severity: "success" | "error" = "success",
+  ) => setSnackbar({ open: true, message, severity });
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
       setFetchError(null);
       const response = await reportAPI.getReports();
       setReports(response.data || []);
-    } catch (err) {
-      console.error("Error fetching reports:", err);
+    } catch {
       setFetchError("Failed to load reports. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const handleSubmit = async () => {
     if (!formValues.reportType) {
@@ -82,11 +119,11 @@ const Reports: React.FC = () => {
     try {
       setSubmitLoading(true);
       setSubmitError(null);
-      const payload: any = { reportType: formValues.reportType };
-      if (formValues.accountId)
-        payload.accountId = parseInt(formValues.accountId);
-      if (formValues.requestedBy) payload.requestedBy = formValues.requestedBy;
-
+      const payload: CreateReportData = {
+        reportType: formValues.reportType,
+        accountId: formValues.accountId || undefined,
+        requestedBy: formValues.requestedBy || undefined,
+      };
       const response = await reportAPI.createReport(payload);
       if (response.data) {
         setReports((prev) => [response.data, ...prev]);
@@ -97,6 +134,7 @@ const Reports: React.FC = () => {
         accountId: "",
         requestedBy: "",
       });
+      showSnackbar("Report generation started successfully!");
     } catch (err: any) {
       setSubmitError(
         err.response?.data?.message ||
@@ -133,24 +171,33 @@ const Reports: React.FC = () => {
     }
   };
 
-  const getStatusChipColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return {
-          bg: theme.palette.success.light,
-          color: theme.palette.success.dark,
-        };
-      case "FAILED":
-        return {
-          bg: theme.palette.error.light,
-          color: theme.palette.error.dark,
-        };
-      default:
-        return {
-          bg: theme.palette.warning.light,
-          color: theme.palette.warning.dark,
-        };
-    }
+  const getStatusChip = (status: string) => {
+    const configs: Record<string, { bg: string; color: string }> = {
+      COMPLETED: {
+        bg: `${theme.palette.success.main}15`,
+        color: theme.palette.success.dark,
+      },
+      FAILED: {
+        bg: `${theme.palette.error.main}15`,
+        color: theme.palette.error.dark,
+      },
+      PENDING: {
+        bg: `${theme.palette.warning.main}15`,
+        color: theme.palette.warning.dark,
+      },
+    };
+    const c = configs[status] || {
+      bg: theme.palette.grey[200],
+      color: theme.palette.grey[700],
+    };
+    return (
+      <Chip
+        icon={getStatusIcon(status)}
+        label={status}
+        size="small"
+        sx={{ bgcolor: c.bg, color: c.color, fontWeight: 600, border: "none" }}
+      />
+    );
   };
 
   if (loading) {
@@ -160,7 +207,7 @@ const Reports: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "80vh",
+          height: "70vh",
         }}
       >
         <CircularProgress />
@@ -168,15 +215,20 @@ const Reports: React.FC = () => {
     );
   }
 
+  const completedCount = reports.filter((r) => r.status === "COMPLETED").length;
+  const pendingCount = reports.filter((r) => r.status === "PENDING").length;
+
   return (
     <Box>
+      {/* Header */}
       <Box
         sx={{
           mb: 4,
-          p: 4,
-          borderRadius: 3,
+          p: { xs: 3, md: 4 },
+          borderRadius: 4,
           background:
-            "linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)",
+            "linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(124,58,237,0.08) 100%)",
+          border: `1px solid ${theme.palette.divider}`,
           display: "flex",
           flexDirection: { xs: "column", md: "row" },
           alignItems: { xs: "flex-start", md: "center" },
@@ -185,25 +237,84 @@ const Reports: React.FC = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
             Reports
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Generate and view financial reports for your accounts
+            Generate and download financial reports for your accounts
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-          sx={{ py: 1.5, px: 3, fontWeight: 600 }}
-        >
-          Generate Report
-        </Button>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={fetchReports}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            sx={{ py: 1.5, px: 3 }}
+          >
+            Generate Report
+          </Button>
+        </Box>
       </Box>
 
+      {/* Summary Stats */}
+      {reports.length > 0 && (
+        <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+          {[
+            {
+              label: "Total Reports",
+              value: reports.length,
+              color: theme.palette.primary.main,
+            },
+            {
+              label: "Completed",
+              value: completedCount,
+              color: theme.palette.success.main,
+            },
+            {
+              label: "Pending",
+              value: pendingCount,
+              color: theme.palette.warning.main,
+            },
+          ].map((stat) => (
+            <Paper
+              key={stat.label}
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                border: `1px solid ${theme.palette.divider}`,
+                minWidth: 120,
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="h5" fontWeight={700} color={stat.color}>
+                {stat.value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {stat.label}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
+      )}
+
       {fetchError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          action={
+            <Button size="small" onClick={fetchReports}>
+              Retry
+            </Button>
+          }
+        >
           {fetchError}
         </Alert>
       )}
@@ -213,28 +324,28 @@ const Reports: React.FC = () => {
           elevation={0}
           sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}
         >
-          <CardContent sx={{ textAlign: "center", py: 6 }}>
+          <CardContent sx={{ textAlign: "center", py: 8 }}>
             <AssessmentIcon
-              sx={{
-                fontSize: 64,
-                color: theme.palette.primary.main,
-                mb: 2,
-                opacity: 0.5,
-              }}
+              sx={{ fontSize: 64, color: "primary.main", mb: 2, opacity: 0.4 }}
             />
-            <Typography variant="h6" sx={{ mb: 1 }}>
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
               No Reports Yet
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 3, maxWidth: 380, mx: "auto" }}
+            >
               Generate your first financial report to gain insights into your
-              accounts.
+              spending and savings.
             </Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setOpenDialog(true)}
+              size="large"
             >
-              Generate Report
+              Generate First Report
             </Button>
           </CardContent>
         </Card>
@@ -248,7 +359,7 @@ const Reports: React.FC = () => {
           }}
         >
           <Box
-            sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}
+            sx={{ p: 2.5, borderBottom: `1px solid ${theme.palette.divider}` }}
           >
             <Typography variant="subtitle1" fontWeight={600}>
               Report History ({reports.length})
@@ -257,49 +368,65 @@ const Reports: React.FC = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Report ID</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Generated At</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Requested By</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Account ID</TableCell>
+                <TableRow>
+                  <TableCell>Report ID</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Generated At</TableCell>
+                  <TableCell>Account</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {reports.map((report) => (
                   <TableRow
-                    key={report.id}
-                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                    key={report.reportId}
+                    hover
+                    sx={{ "&:last-child td": { border: 0 } }}
                   >
-                    <TableCell>#{report.id}</TableCell>
                     <TableCell>
-                      {REPORT_TYPES.find((t) => t.value === report.reportType)
-                        ?.label || report.reportType}
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        fontFamily="monospace"
+                      >
+                        #{report.reportId.slice(-8).toUpperCase()}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        icon={getStatusIcon(report.status)}
-                        label={report.status}
+                      <Typography variant="body2" fontWeight={500}>
+                        {REPORT_TYPES.find((t) => t.value === report.reportType)
+                          ?.label || report.reportType}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{getStatusChip(report.status)}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {new Date(report.generatedAt).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {report.accountId || "All Accounts"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Button
                         size="small"
-                        sx={{
-                          bgcolor: getStatusChipColor(report.status).bg,
-                          color: getStatusChipColor(report.status).color,
-                          fontWeight: 600,
-                        }}
-                      />
+                        startIcon={<DownloadIcon />}
+                        disabled={report.status !== "COMPLETED"}
+                        variant="outlined"
+                        sx={{ fontSize: "0.75rem", py: 0.5 }}
+                      >
+                        Download
+                      </Button>
                     </TableCell>
-                    <TableCell>
-                      {new Date(report.generatedAt).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell>{report.requestedBy || "-"}</TableCell>
-                    <TableCell>{report.accountId || "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -308,26 +435,26 @@ const Reports: React.FC = () => {
         </Paper>
       )}
 
+      {/* Generate Report Dialog */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>
-          Generate New Report
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Generate New Report</DialogTitle>
         <DialogContent>
           {submitError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {submitError}
             </Alert>
           )}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column" }}>
             <TextField
               label="Report Type"
               select
               fullWidth
+              margin="normal"
               value={formValues.reportType}
               onChange={(e) =>
                 setFormValues({ ...formValues, reportType: e.target.value })
@@ -335,40 +462,67 @@ const Reports: React.FC = () => {
             >
               {REPORT_TYPES.map((type) => (
                 <MenuItem key={type.value} value={type.value}>
-                  {type.label}
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      {type.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {type.description}
+                    </Typography>
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
             <TextField
               label="Account ID (optional)"
               fullWidth
-              type="number"
-              value={formValues.accountId}
+              margin="normal"
+              value={formValues.accountId || ""}
               onChange={(e) =>
                 setFormValues({ ...formValues, accountId: e.target.value })
               }
+              placeholder="Leave blank to include all accounts"
             />
             <TextField
               label="Requested By (optional)"
               fullWidth
-              value={formValues.requestedBy}
+              margin="normal"
+              value={formValues.requestedBy || ""}
               onChange={(e) =>
                 setFormValues({ ...formValues, requestedBy: e.target.value })
               }
+              placeholder="Your name or reference"
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button variant="outlined" onClick={() => setOpenDialog(false)}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
             disabled={submitLoading}
           >
-            {submitLoading ? "Generating..." : "Generate"}
+            {submitLoading ? "Generating..." : "Generate Report"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          sx={{ borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

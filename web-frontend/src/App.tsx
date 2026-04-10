@@ -6,12 +6,15 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import AccountDetails from "./pages/AccountDetails";
 import Dashboard from "./pages/Dashboard";
+import ForgotPassword from "./pages/ForgotPassword";
 import Loans from "./pages/Loans";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import Reports from "./pages/Reports";
 import SavingsGoals from "./pages/SavingsGoals";
+import Settings from "./pages/Settings";
 import Transactions from "./pages/Transactions";
 
 function App() {
@@ -24,6 +27,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
               path="/"
               element={
@@ -38,6 +42,8 @@ function App() {
               <Route path="loans" element={<Loans />} />
               <Route path="savings" element={<SavingsGoals />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,9 +1,14 @@
-import { Box, Button, Typography } from "@mui/material";
+import {
+  ArrowBack as ArrowBackIcon,
+  Home as HomeIcon,
+} from "@mui/icons-material";
+import { Box, Button, Typography, useTheme } from "@mui/material";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   return (
     <Box
@@ -12,29 +17,54 @@ const NotFound: React.FC = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "80vh",
+        minHeight: "100vh",
         textAlign: "center",
         p: 3,
+        background: "linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%)",
       }}
     >
-      <Typography variant="h1" color="primary" gutterBottom>
+      <Box
+        sx={{
+          fontSize: "8rem",
+          fontWeight: 900,
+          lineHeight: 1,
+          mb: 2,
+          background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
         404
-      </Typography>
-      <Typography variant="h4" gutterBottom>
+      </Box>
+      <Typography variant="h4" fontWeight={700} gutterBottom>
         Page Not Found
       </Typography>
-      <Typography variant="body1" color="text.secondary" paragraph>
-        The page you are looking for might have been removed, had its name
-        changed, or is temporarily unavailable.
-      </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => navigate("/")}
-        sx={{ mt: 2 }}
+      <Typography
+        variant="body1"
+        color="text.secondary"
+        sx={{ mb: 4, maxWidth: 400 }}
       >
-        Go to Home
-      </Button>
+        The page you're looking for doesn't exist or has been moved.
+      </Typography>
+      <Box sx={{ display: "flex", gap: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ borderRadius: 2 }}
+        >
+          Go Back
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<HomeIcon />}
+          onClick={() => navigate("/")}
+          sx={{ borderRadius: 2 }}
+        >
+          Go Home
+        </Button>
+      </Box>
     </Box>
   );
 };

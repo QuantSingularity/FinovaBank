@@ -22,7 +22,6 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import GridCompatibility from "../components/GridCompatibility";
 import { useAuth } from "../context/AuthContext";
 
 const Login: React.FC = () => {
@@ -35,14 +34,18 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const validateEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email || !password) {
       setError("Please enter both email and password");
       return;
     }
-
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
     try {
       setError(null);
       setLoading(true);
@@ -56,6 +59,24 @@ const Login: React.FC = () => {
     }
   };
 
+  const features = [
+    {
+      icon: <LockIcon />,
+      title: "Secure Banking",
+      desc: "Bank with confidence using advanced security",
+    },
+    {
+      icon: <TrendingUpIcon />,
+      title: "Financial Insights",
+      desc: "Get personalized insights to improve your finances",
+    },
+    {
+      icon: <DevicesIcon />,
+      title: "Anywhere, Anytime",
+      desc: "Access your accounts from any device",
+    },
+  ];
+
   return (
     <Box
       sx={{
@@ -63,7 +84,7 @@ const Login: React.FC = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `linear-gradient(135deg, ${theme.palette.primary.light}15 0%, ${theme.palette.secondary.light}15 100%)`,
+        background: "linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%)",
         p: 3,
       }}
     >
@@ -74,36 +95,54 @@ const Login: React.FC = () => {
           overflow: "hidden",
           width: "100%",
           maxWidth: 1000,
-          boxShadow: "0px 10px 40px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0px 20px 60px rgba(15, 23, 42, 0.12)",
           display: "flex",
           flexDirection: { xs: "column", md: "row" },
+          border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        {/* Left Side - Login Form */}
+        {/* Left: Login Form */}
         <Box
           sx={{
             flex: 1,
-            p: 4,
+            p: { xs: 4, md: 5 },
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+          <Box sx={{ mb: 5, display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2.5,
+                background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <LockIcon sx={{ color: "white", fontSize: 20 }} />
+            </Box>
             <Typography
-              variant="h4"
-              component="h1"
-              fontWeight={700}
-              color="primary"
+              variant="h5"
+              fontWeight={800}
+              color="primary.main"
+              letterSpacing="-0.02em"
             >
               FinovaBank
             </Typography>
           </Box>
 
-          <Typography variant="h5" fontWeight={600} sx={{ mb: 1 }}>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            sx={{ mb: 0.75, letterSpacing: "-0.02em" }}
+          >
             Welcome Back
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Please sign in to access your account
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Sign in to access your account
           </Typography>
 
           {error && (
@@ -112,15 +151,15 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit}>
+          <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
               fullWidth
               label="Email Address"
+              type="email"
               variant="outlined"
               margin="normal"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              type="email"
               autoComplete="email"
               inputProps={{ "aria-label": "Email Address" }}
               InputProps={{
@@ -131,7 +170,6 @@ const Login: React.FC = () => {
                 ),
               }}
             />
-
             <TextField
               fullWidth
               label="Password"
@@ -151,7 +189,7 @@ const Login: React.FC = () => {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowPassword((prev) => !prev)}
                       edge="end"
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
@@ -169,24 +207,13 @@ const Login: React.FC = () => {
             />
 
             <Box
-              sx={{
-                display: "flex",
-                justifyContent: "flex-end",
-                mt: 1,
-                mb: 3,
-              }}
+              sx={{ display: "flex", justifyContent: "flex-end", mt: 1, mb: 3 }}
             >
               <Link
                 component={RouterLink}
                 to="/forgot-password"
                 variant="body2"
-                sx={{
-                  color: theme.palette.primary.main,
-                  textDecoration: "none",
-                  "&:hover": {
-                    textDecoration: "underline",
-                  },
-                }}
+                sx={{ color: "primary.main", fontWeight: 500 }}
               >
                 Forgot password?
               </Link>
@@ -198,11 +225,7 @@ const Login: React.FC = () => {
               variant="contained"
               size="large"
               disabled={loading}
-              sx={{
-                py: 1.5,
-                fontWeight: 600,
-                boxShadow: "0px 8px 16px rgba(51, 102, 255, 0.24)",
-              }}
+              sx={{ py: 1.75, fontWeight: 700, fontSize: "1rem" }}
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
@@ -213,171 +236,128 @@ const Login: React.FC = () => {
                 <Link
                   component={RouterLink}
                   to="/register"
-                  sx={{
-                    color: theme.palette.primary.main,
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    "&:hover": {
-                      textDecoration: "underline",
-                    },
-                  }}
+                  sx={{ color: "primary.main", fontWeight: 700 }}
                 >
-                  Sign Up
+                  Create Account
                 </Link>
               </Typography>
             </Box>
 
-            <Box sx={{ mt: 4, mb: 2 }}>
-              <Divider>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ px: 1 }}
-                >
-                  Or continue with
-                </Typography>
-              </Divider>
-            </Box>
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="caption" color="text.secondary">
+                or continue with
+              </Typography>
+            </Divider>
 
-            <GridCompatibility container spacing={2}>
-              <GridCompatibility xs={4}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 1.5,
+              }}
+            >
+              {["Google", "Facebook", "Apple"].map((provider) => (
                 <Button
+                  key={provider}
                   fullWidth
                   variant="outlined"
-                  sx={{ py: 1.5 }}
+                  sx={{ py: 1.25, fontSize: "0.8rem" }}
                   onClick={() => setError("Social login is not yet available.")}
                 >
-                  Google
+                  {provider}
                 </Button>
-              </GridCompatibility>
-              <GridCompatibility xs={4}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  sx={{ py: 1.5 }}
-                  onClick={() => setError("Social login is not yet available.")}
-                >
-                  Facebook
-                </Button>
-              </GridCompatibility>
-              <GridCompatibility xs={4}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  sx={{ py: 1.5 }}
-                  onClick={() => setError("Social login is not yet available.")}
-                >
-                  Apple
-                </Button>
-              </GridCompatibility>
-            </GridCompatibility>
+              ))}
+            </Box>
           </Box>
         </Box>
 
-        {/* Right Side - Info Panel */}
+        {/* Right: Info Panel */}
         <Box
           sx={{
             flex: 1,
-            bgcolor: "primary.main",
-            color: "white",
-            p: 4,
+            p: { xs: 4, md: 5 },
             display: { xs: "none", md: "flex" },
             flexDirection: "column",
             justifyContent: "center",
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+            background: "linear-gradient(160deg, #1e3a8a 0%, #7c3aed 100%)",
+            color: "white",
           }}
         >
-          <Typography variant="h4" fontWeight={700} sx={{ mb: 2 }}>
-            Banking Made Simple
+          <Typography
+            variant="h3"
+            fontWeight={800}
+            sx={{ mb: 2, lineHeight: 1.2, letterSpacing: "-0.02em" }}
+          >
+            Modern Banking,
+            <br />
+            Simplified.
           </Typography>
-          <Typography variant="body1" sx={{ mb: 4, opacity: 0.9 }}>
+          <Typography
+            variant="body1"
+            sx={{ mb: 5, opacity: 0.85, lineHeight: 1.7 }}
+          >
             Access all your financial services in one place with our secure and
-            user-friendly platform.
+            intuitive platform.
           </Typography>
 
-          <Box sx={{ mb: 4 }}>
-            <GridCompatibility container spacing={2}>
-              <GridCompatibility xs={12}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: "rgba(255, 255, 255, 0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mr: 2,
-                    }}
-                  >
-                    <LockIcon />
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Secure Banking
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                      Bank with confidence using our advanced security features
-                    </Typography>
-                  </Box>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {features.map((feature) => (
+              <Box
+                key={feature.title}
+                sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}
+              >
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2.5,
+                    bgcolor: "rgba(255,255,255,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {feature.icon}
                 </Box>
-              </GridCompatibility>
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight={700}
+                    sx={{ mb: 0.25 }}
+                  >
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.75 }}>
+                    {feature.desc}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
 
-              <GridCompatibility xs={12}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: "rgba(255, 255, 255, 0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mr: 2,
-                    }}
-                  >
-                    <TrendingUpIcon />
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Financial Insights
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                      Get personalized insights to improve your financial health
-                    </Typography>
-                  </Box>
-                </Box>
-              </GridCompatibility>
-
-              <GridCompatibility xs={12}>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: "rgba(255, 255, 255, 0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mr: 2,
-                    }}
-                  >
-                    <DevicesIcon />
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Anywhere, Anytime
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                      Access your accounts from any device, whenever you need
-                    </Typography>
-                  </Box>
-                </Box>
-              </GridCompatibility>
-            </GridCompatibility>
+          <Box
+            sx={{
+              mt: 5,
+              p: 2.5,
+              borderRadius: 3,
+              bgcolor: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.15)",
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{ opacity: 0.9, fontStyle: "italic", lineHeight: 1.6 }}
+            >
+              "FinovaBank has completely transformed how I manage my finances.
+              The insights are incredible!"
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.7, mt: 1, display: "block" }}
+            >
+              — Sarah K., Premium Member
+            </Typography>
           </Box>
         </Box>
       </Paper>

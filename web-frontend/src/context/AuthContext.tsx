@@ -25,6 +25,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,12 +65,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               handleClearAuth();
             }
           } catch {
+            // Network error: keep existing session rather than logging out
             setUser(JSON.parse(storedUser));
             setIsAuthenticated(true);
           }
         }
-      } catch (err) {
-        console.error("Auth verification failed:", err);
+      } catch {
         handleClearAuth();
       } finally {
         setLoading(false);
@@ -86,6 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const clearError = () => setError(null);
+
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -101,7 +104,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       navigate("/");
     } catch (err: any) {
       const msg =
-        err.response?.data?.message || "Login failed. Please try again.";
+        err.response?.data?.message ||
+        "Login failed. Please check your credentials.";
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -139,7 +143,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, login, logout, register, loading, error }}
+      value={{
+        isAuthenticated,
+        user,
+        login,
+        logout,
+        register,
+        loading,
+        error,
+        clearError,
+      }}
     >
       {children}
     </AuthContext.Provider>

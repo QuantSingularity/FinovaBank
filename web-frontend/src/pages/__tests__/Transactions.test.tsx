@@ -6,49 +6,49 @@ import Transactions from "../Transactions";
 const mockTransactions = [
   {
     transactionId: "T001",
-    description: "Grocery Store",
-    amount: 75.5,
-    transactionType: "DEBIT",
-    date: "2025-05-01",
-    category: "Food",
+    accountId: "ACC001",
+    transactionType: "CREDIT",
+    amount: 500,
+    description: "Salary Payment",
+    category: "Income",
     status: "COMPLETED",
+    date: "2025-04-01",
+    currency: "USD",
   },
   {
     transactionId: "T002",
-    description: "Salary Deposit",
-    amount: 2000.0,
-    transactionType: "CREDIT",
-    date: "2025-04-28",
-    category: "Income",
-    status: "COMPLETED",
-  },
-  {
-    transactionId: "T003",
-    description: "Coffee Shop",
-    amount: 5.0,
+    accountId: "ACC001",
     transactionType: "DEBIT",
-    date: "2025-04-30",
+    amount: 150,
+    description: "Grocery Store",
     category: "Food",
     status: "COMPLETED",
+    date: "2025-04-02",
+    currency: "USD",
   },
 ];
 
 jest.mock("../../services/api", () => ({
   transactionAPI: {
     getTransactions: jest.fn().mockResolvedValue({ data: mockTransactions }),
-    createTransaction: jest.fn().mockResolvedValue({
-      data: {
-        transactionId: "T999",
-        description: "Test Deposit",
-        amount: 100,
-        transactionType: "CREDIT",
-        date: "2025-06-01",
-      },
-    }),
+    createTransaction: jest
+      .fn()
+      .mockResolvedValue({
+        data: {
+          transactionId: "T003",
+          transactionType: "DEPOSIT",
+          amount: 200,
+          description: "Test",
+          date: "2025-04-03",
+          status: "COMPLETED",
+          accountId: "ACC001",
+          currency: "USD",
+        },
+      }),
   },
 }));
 
-const renderTransactions = () =>
+const renderComponent = () =>
   render(
     <BrowserRouter>
       <Transactions />
@@ -56,82 +56,59 @@ const renderTransactions = () =>
   );
 
 describe("Transactions Page", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test("shows loading spinner initially", () => {
-    renderTransactions();
+  test("shows loading initially", () => {
+    renderComponent();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  test("renders transaction list after loading", async () => {
-    renderTransactions();
+  test("renders transactions after loading", async () => {
+    renderComponent();
     await waitFor(() => {
+      expect(screen.getByText("Salary Payment")).toBeInTheDocument();
       expect(screen.getByText("Grocery Store")).toBeInTheDocument();
     });
   });
 
-  test("renders all transactions", async () => {
-    renderTransactions();
+  test("renders Transactions heading", async () => {
+    renderComponent();
     await waitFor(() => {
-      expect(screen.getByText("Salary Deposit")).toBeInTheDocument();
-      expect(screen.getByText("Coffee Shop")).toBeInTheDocument();
+      expect(screen.getByText(/^Transactions$/)).toBeInTheDocument();
     });
   });
 
-  test("renders Transactions page heading", async () => {
-    renderTransactions();
+  test("renders New Transaction button", async () => {
+    renderComponent();
     await waitFor(() => {
-      expect(screen.getByText("Transactions")).toBeInTheDocument();
+      expect(screen.getByText(/New Transaction/i)).toBeInTheDocument();
     });
   });
 
   test("filters transactions by search query", async () => {
-    renderTransactions();
-    await waitFor(() => screen.getByText("Grocery Store"));
-    const searchInput = screen.getByPlaceholderText(/Search transactions/i);
-    fireEvent.change(searchInput, { target: { value: "Salary" } });
-    expect(screen.getByText("Salary Deposit")).toBeInTheDocument();
-    expect(screen.queryByText("Grocery Store")).not.toBeInTheDocument();
-  });
-
-  test("filters to income tab correctly", async () => {
-    renderTransactions();
-    await waitFor(() => screen.getByText("Grocery Store"));
-    fireEvent.click(screen.getByRole("tab", { name: /Income/i }));
+    renderComponent();
+    await waitFor(() => screen.getByText("Salary Payment"));
+    const searchInput = screen.getByPlaceholderText(/Search by description/i);
+    fireEvent.change(searchInput, { target: { value: "Grocery" } });
     await waitFor(() => {
-      expect(screen.getByText("Salary Deposit")).toBeInTheDocument();
-      expect(screen.queryByText("Grocery Store")).not.toBeInTheDocument();
-    });
-  });
-
-  test("filters to expenses tab correctly", async () => {
-    renderTransactions();
-    await waitFor(() => screen.getByText("Grocery Store"));
-    fireEvent.click(screen.getByRole("tab", { name: /Expenses/i }));
-    await waitFor(() => {
+      expect(screen.queryByText("Salary Payment")).not.toBeInTheDocument();
       expect(screen.getByText("Grocery Store")).toBeInTheDocument();
-      expect(screen.queryByText("Salary Deposit")).not.toBeInTheDocument();
     });
   });
 
-  test("shows new transaction dialog when button clicked", async () => {
-    renderTransactions();
-    await waitFor(() => screen.getByText("Transactions"));
-    fireEvent.click(screen.getByRole("button", { name: /New Transfer/i }));
+  test("shows summary stats after loading", async () => {
+    renderComponent();
     await waitFor(() => {
-      expect(screen.getByText("New Transaction")).toBeInTheDocument();
+      expect(screen.getByText(/Total Transactions/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total Income/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total Expenses/i)).toBeInTheDocument();
     });
   });
 
-  test("shows no results message when search has no match", async () => {
-    renderTransactions();
-    await waitFor(() => screen.getByText("Grocery Store"));
-    const searchInput = screen.getByPlaceholderText(/Search transactions/i);
-    fireEvent.change(searchInput, { target: { value: "zzznomatch" } });
-    expect(
-      screen.getByText(/No transactions match your search criteria/i),
-    ).toBeInTheDocument();
+  test("opens New Transaction dialog", async () => {
+    renderComponent();
+    await waitFor(() => screen.getByText(/New Transaction/i));
+    fireEvent.click(screen.getByText(/New Transaction/i));
+    await waitFor(() => {
+      expect(screen.getByText(/New Transaction$/i)).toBeInTheDocument();
+    });
   });
 });

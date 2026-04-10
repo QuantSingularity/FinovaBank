@@ -96,7 +96,7 @@ const AccountDetails: React.FC = () => {
     );
   }
 
-  const maskId = (id: string) => `****${id.slice(-4)}`;
+  const maskId = (id: string) => (id ? `****${String(id).slice(-4)}` : "****");
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 } }}>

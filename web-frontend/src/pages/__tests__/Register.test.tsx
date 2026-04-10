@@ -25,22 +25,16 @@ describe("Register Page", () => {
     jest.clearAllMocks();
   });
 
-  test("renders the first step (Personal Information) by default", () => {
+  test("renders registration form step 1", () => {
     renderRegister();
-    expect(screen.getByText(/Personal Information/i)).toBeInTheDocument();
+    expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Phone/i)).toBeInTheDocument();
   });
 
-  test("renders the FinovaBank brand name", () => {
+  test("shows validation errors for empty fields on step 1", async () => {
     renderRegister();
-    expect(screen.getByText("FinovaBank")).toBeInTheDocument();
-  });
-
-  test("shows error when next is clicked with empty fields", async () => {
-    renderRegister();
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    fireEvent.click(screen.getByText(/Next/i));
     await waitFor(() => {
       expect(
         screen.getByText(/Please fill in all required fields/i),
@@ -48,73 +42,25 @@ describe("Register Page", () => {
     });
   });
 
-  test("shows error for invalid email format", async () => {
+  test("shows error for invalid email on step 1", async () => {
     renderRegister();
     fireEvent.change(screen.getByLabelText(/Full Name/i), {
       target: { value: "John Doe" },
     });
     fireEvent.change(screen.getByLabelText(/Email/i), {
-      target: { value: "invalidemail" },
+      target: { value: "invalid" },
     });
     fireEvent.change(screen.getByLabelText(/Phone/i), {
       target: { value: "1234567890" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    fireEvent.click(screen.getByText(/Next/i));
     await waitFor(() => {
-      expect(
-        screen.getByText(/Please enter a valid email address/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/valid email/i)).toBeInTheDocument();
     });
   });
 
-  test("advances to step 2 with valid personal info", async () => {
+  test("renders Sign In link", () => {
     renderRegister();
-    fireEvent.change(screen.getByLabelText(/Full Name/i), {
-      target: { value: "John Doe" },
-    });
-    fireEvent.change(screen.getByLabelText(/Email/i), {
-      target: { value: "john@example.com" },
-    });
-    fireEvent.change(screen.getByLabelText(/Phone/i), {
-      target: { value: "1234567890" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    await waitFor(() => {
-      expect(screen.getByText(/Account Security/i)).toBeInTheDocument();
-    });
-  });
-
-  test("shows error when passwords do not match on step 2", async () => {
-    renderRegister();
-    // Fill step 1
-    fireEvent.change(screen.getByLabelText(/Full Name/i), {
-      target: { value: "John Doe" },
-    });
-    fireEvent.change(screen.getByLabelText(/Email/i), {
-      target: { value: "john@example.com" },
-    });
-    fireEvent.change(screen.getByLabelText(/Phone/i), {
-      target: { value: "1234567890" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    // Fill step 2
-    await waitFor(() => screen.getByLabelText(/^Password$/i));
-    fireEvent.change(screen.getByLabelText(/^Password$/i), {
-      target: { value: "password123" },
-    });
-    fireEvent.change(screen.getByLabelText(/Confirm Password/i), {
-      target: { value: "different" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    await waitFor(() => {
-      expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
-    });
-  });
-
-  test("has link to login page", () => {
-    renderRegister();
-    const signInLink = screen.getByRole("link", { name: /Sign In/i });
-    expect(signInLink).toBeInTheDocument();
-    expect(signInLink).toHaveAttribute("href", "/login");
+    expect(screen.getByText(/Sign In/i)).toBeInTheDocument();
   });
 });

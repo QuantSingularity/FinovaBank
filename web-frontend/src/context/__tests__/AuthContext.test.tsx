@@ -6,9 +6,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "../AuthContext";
-import React from "react";
 
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
@@ -23,8 +23,16 @@ jest.mock("../../services/api", () => ({
 }));
 
 const TestComponent: React.FC = () => {
-  const { isAuthenticated, user, login, logout, register, loading, error } =
-    useAuth();
+  const {
+    isAuthenticated,
+    user,
+    login,
+    logout,
+    register,
+    loading,
+    error,
+    clearError,
+  } = useAuth();
   return (
     <div>
       <p>Authenticated: {isAuthenticated ? "Yes" : "No"}</p>
@@ -40,6 +48,7 @@ const TestComponent: React.FC = () => {
       >
         Register
       </button>
+      <button onClick={clearError}>Clear Error</button>
     </div>
   );
 };
@@ -82,7 +91,7 @@ describe("AuthContext", () => {
       data: {
         token: "test-token",
         user: {
-          id: 1,
+          id: "1",
           name: "Test User",
           email: "test@example.com",
           role: "USER",
@@ -103,7 +112,7 @@ describe("AuthContext", () => {
       data: {
         token: "test-token-123",
         user: {
-          id: 1,
+          id: "1",
           name: "Test User",
           email: "test@example.com",
           role: "USER",
@@ -124,7 +133,7 @@ describe("AuthContext", () => {
       data: {
         token: "test-token",
         user: {
-          id: 1,
+          id: "1",
           name: "Test User",
           email: "test@example.com",
           role: "USER",
@@ -147,7 +156,7 @@ describe("AuthContext", () => {
     sessionStorage.setItem(
       "user",
       JSON.stringify({
-        id: 2,
+        id: "2",
         name: "Stored User",
         email: "stored@example.com",
         role: "USER",
@@ -162,12 +171,31 @@ describe("AuthContext", () => {
     });
   });
 
+  test("keeps session on token verification network error", async () => {
+    sessionStorage.setItem("token", "existing-token");
+    sessionStorage.setItem(
+      "user",
+      JSON.stringify({
+        id: "2",
+        name: "Stored User",
+        email: "stored@example.com",
+        role: "USER",
+        createdAt: "",
+      }),
+    );
+    mockVerifyToken.mockRejectedValueOnce(new Error("Network Error"));
+    renderWithAuth();
+    await waitFor(() => {
+      expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
+    });
+  });
+
   test("registers user and sets authenticated", async () => {
     mockRegister.mockResolvedValueOnce({
       data: {
         token: "reg-token",
         user: {
-          id: 3,
+          id: "3",
           name: "New User",
           email: "new@example.com",
           role: "USER",
@@ -180,6 +208,34 @@ describe("AuthContext", () => {
     fireEvent.click(screen.getByRole("button", { name: /Register/i }));
     await waitFor(() => {
       expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
+    });
+  });
+
+  test("sets error on failed login", async () => {
+    mockLogin.mockRejectedValueOnce({
+      response: { data: { message: "Invalid credentials" } },
+    });
+    renderWithAuth();
+    await waitFor(() => screen.getByText("Authenticated: No"));
+    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Error: Invalid credentials/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("clearError removes the error", async () => {
+    mockLogin.mockRejectedValueOnce({
+      response: { data: { message: "Bad credentials" } },
+    });
+    renderWithAuth();
+    await waitFor(() => screen.getByText("Authenticated: No"));
+    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+    await waitFor(() => screen.getByText(/Error: Bad credentials/i));
+    fireEvent.click(screen.getByRole("button", { name: /Clear Error/i }));
+    await waitFor(() => {
+      expect(screen.queryByText(/Error:/i)).not.toBeInTheDocument();
     });
   });
 });

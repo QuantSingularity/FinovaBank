@@ -97,6 +97,7 @@ export interface CreateReportData {
   reportType: string;
   accountId?: string;
   customerId?: string;
+  requestedBy?: string;
 }
 
 const api = axios.create({
@@ -115,9 +116,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error: AxiosError) => {
-    return Promise.reject(error);
-  },
+  (error: AxiosError) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
@@ -126,7 +125,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       sessionStorage.removeItem("token");
       sessionStorage.removeItem("user");
-
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
@@ -137,10 +135,8 @@ api.interceptors.response.use(
 
 export const accountAPI = {
   getAccounts: () => api.get<Account[]>("/accounts"),
-
   getAccountDetails: (accountId: string) =>
     api.get<Account>(`/accounts/${accountId}`),
-
   createAccount: (data: CreateAccountData) =>
     api.post<Account>("/accounts", data),
 };
@@ -177,33 +173,25 @@ export const authAPI = {
 
 export const loanAPI = {
   getLoans: () => api.get<Loan[]>("/loans"),
-
   getLoanDetails: (loanId: string) => api.get<Loan>(`/loans/${loanId}`),
-
   applyForLoan: (data: CreateLoanData) => api.post<Loan>("/loans", data),
 };
 
 export const savingsAPI = {
   getSavingsGoals: () => api.get<SavingsGoal[]>("/savings-goals"),
-
   getSavingsGoalById: (goalId: string) =>
     api.get<SavingsGoal>(`/savings-goals/${goalId}`),
-
   createSavingsGoal: (data: CreateSavingsGoalData) =>
     api.post<SavingsGoal>("/savings-goals", data),
-
   updateSavingsGoal: (goalId: string, data: Partial<CreateSavingsGoalData>) =>
     api.put<SavingsGoal>(`/savings-goals/${goalId}`, data),
-
   deleteSavingsGoal: (goalId: string) =>
     api.delete<void>(`/savings-goals/${goalId}`),
 };
 
 export const reportAPI = {
   getReports: () => api.get<Report[]>("/reports"),
-
   getReportById: (reportId: string) => api.get<Report>(`/reports/${reportId}`),
-
   createReport: (data: CreateReportData) => api.post<Report>("/reports", data),
 };
 

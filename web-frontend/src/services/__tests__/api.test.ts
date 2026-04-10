@@ -35,7 +35,7 @@ describe("API Service", () => {
   describe("authAPI", () => {
     test("login calls correct endpoint", async () => {
       mockApiInstance.post.mockResolvedValueOnce({
-        data: { token: "token", user: { id: 1 } },
+        data: { token: "token", user: { id: "1" } },
       });
       await authAPI.login("test@example.com", "password");
       expect(mockApiInstance.post).toHaveBeenCalledWith("/auth/login", {
@@ -46,7 +46,7 @@ describe("API Service", () => {
 
     test("register calls correct endpoint", async () => {
       mockApiInstance.post.mockResolvedValueOnce({
-        data: { token: "token", user: { id: 2 } },
+        data: { token: "token", user: { id: "2" } },
       });
       await authAPI.register("John", "john@example.com", "pass123");
       expect(mockApiInstance.post).toHaveBeenCalledWith("/auth/register", {
@@ -72,17 +72,20 @@ describe("API Service", () => {
       expect(mockApiInstance.get).toHaveBeenCalledWith("/accounts");
     });
 
-    test("getAccountDetails calls correct endpoint with ID", async () => {
+    test("getAccountDetails calls correct endpoint with string ID", async () => {
       mockApiInstance.get.mockResolvedValueOnce({ data: {} });
       await accountAPI.getAccountDetails("ACC001");
       expect(mockApiInstance.get).toHaveBeenCalledWith("/accounts/ACC001");
     });
 
-    test("createAccount posts to correct endpoint", async () => {
+    test("createAccount posts to correct endpoint with correct field name", async () => {
       mockApiInstance.post.mockResolvedValueOnce({ data: {} });
-      await accountAPI.createAccount({ type: "CHECKING", currency: "USD" });
+      await accountAPI.createAccount({
+        accountType: "CHECKING",
+        currency: "USD",
+      });
       expect(mockApiInstance.post).toHaveBeenCalledWith("/accounts", {
-        type: "CHECKING",
+        accountType: "CHECKING",
         currency: "USD",
       });
     });
@@ -97,16 +100,16 @@ describe("API Service", () => {
       });
     });
 
-    test("getTransactionById calls correct endpoint", async () => {
+    test("getTransactionById accepts string ID", async () => {
       mockApiInstance.get.mockResolvedValueOnce({ data: {} });
-      await transactionAPI.getTransactionById(42);
-      expect(mockApiInstance.get).toHaveBeenCalledWith("/transactions/42");
+      await transactionAPI.getTransactionById("T001");
+      expect(mockApiInstance.get).toHaveBeenCalledWith("/transactions/T001");
     });
 
     test("createTransaction posts to correct endpoint", async () => {
       mockApiInstance.post.mockResolvedValueOnce({ data: {} });
       const payload = {
-        type: "DEPOSIT",
+        type: "DEPOSIT" as const,
         amount: 500,
         description: "Test",
         accountId: "ACC001",
@@ -140,18 +143,21 @@ describe("API Service", () => {
       );
     });
 
-    test("updateSavingsGoal puts to /savings-goals/:id", async () => {
+    test("updateSavingsGoal uses string ID", async () => {
       mockApiInstance.put.mockResolvedValueOnce({ data: {} });
-      await savingsAPI.updateSavingsGoal(1, { goalName: "Updated" });
-      expect(mockApiInstance.put).toHaveBeenCalledWith("/savings-goals/1", {
-        goalName: "Updated",
-      });
+      await savingsAPI.updateSavingsGoal("GOAL-001", { goalName: "Updated" });
+      expect(mockApiInstance.put).toHaveBeenCalledWith(
+        "/savings-goals/GOAL-001",
+        { goalName: "Updated" },
+      );
     });
 
-    test("deleteSavingsGoal deletes /savings-goals/:id", async () => {
+    test("deleteSavingsGoal uses string ID", async () => {
       mockApiInstance.delete.mockResolvedValueOnce({});
-      await savingsAPI.deleteSavingsGoal(1);
-      expect(mockApiInstance.delete).toHaveBeenCalledWith("/savings-goals/1");
+      await savingsAPI.deleteSavingsGoal("GOAL-001");
+      expect(mockApiInstance.delete).toHaveBeenCalledWith(
+        "/savings-goals/GOAL-001",
+      );
     });
   });
 
@@ -172,6 +178,12 @@ describe("API Service", () => {
       await loanAPI.applyForLoan(payload);
       expect(mockApiInstance.post).toHaveBeenCalledWith("/loans", payload);
     });
+
+    test("getLoanDetails calls correct endpoint with string ID", async () => {
+      mockApiInstance.get.mockResolvedValueOnce({ data: {} });
+      await loanAPI.getLoanDetails("LOAN-001");
+      expect(mockApiInstance.get).toHaveBeenCalledWith("/loans/LOAN-001");
+    });
   });
 
   describe("reportAPI", () => {
@@ -181,17 +193,21 @@ describe("API Service", () => {
       expect(mockApiInstance.get).toHaveBeenCalledWith("/reports");
     });
 
-    test("getReportById calls correct endpoint", async () => {
+    test("getReportById accepts string ID", async () => {
       mockApiInstance.get.mockResolvedValueOnce({ data: {} });
-      await reportAPI.getReportById(5);
-      expect(mockApiInstance.get).toHaveBeenCalledWith("/reports/5");
+      await reportAPI.getReportById("RPT-001");
+      expect(mockApiInstance.get).toHaveBeenCalledWith("/reports/RPT-001");
     });
 
-    test("createReport posts to correct endpoint", async () => {
+    test("createReport posts to correct endpoint with requestedBy", async () => {
       mockApiInstance.post.mockResolvedValueOnce({ data: {} });
-      await reportAPI.createReport({ reportType: "ACCOUNT_SUMMARY" });
+      await reportAPI.createReport({
+        reportType: "ACCOUNT_SUMMARY",
+        requestedBy: "John",
+      });
       expect(mockApiInstance.post).toHaveBeenCalledWith("/reports", {
         reportType: "ACCOUNT_SUMMARY",
+        requestedBy: "John",
       });
     });
   });

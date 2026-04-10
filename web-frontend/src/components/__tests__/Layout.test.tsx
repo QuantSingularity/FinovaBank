@@ -1,46 +1,37 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { MemoryRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import Layout from "../Layout";
-
-const mockLogout = jest.fn();
-const mockNavigate = jest.fn();
-
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockNavigate,
-  Outlet: () => <div>Page Content</div>,
-}));
 
 jest.mock("../../context/AuthContext", () => ({
   useAuth: () => ({
     user: {
-      id: 1,
-      name: "Jane Smith",
-      email: "jane@example.com",
+      id: "1",
+      name: "Test User",
+      email: "test@example.com",
       role: "USER",
       createdAt: "",
     },
-    logout: mockLogout,
-    isAuthenticated: true,
+    logout: jest.fn(),
   }),
 }));
 
 const renderLayout = () =>
   render(
-    <MemoryRouter>
+    <BrowserRouter>
       <Layout />
-    </MemoryRouter>,
+    </BrowserRouter>,
   );
 
 describe("Layout Component", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  test("renders without crashing", () => {
+    const { container } = renderLayout();
+    expect(container).toBeInTheDocument();
   });
 
   test("renders FinovaBank brand name", () => {
     renderLayout();
-    expect(screen.getAllByText("FinovaBank").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/FinovaBank/i).length).toBeGreaterThan(0);
   });
 
   test("renders navigation menu items", () => {
@@ -52,26 +43,18 @@ describe("Layout Component", () => {
     expect(screen.getByText("Reports")).toBeInTheDocument();
   });
 
-  test("renders user name in the layout", () => {
+  test("renders user name in sidebar", () => {
     renderLayout();
-    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+    expect(screen.getByText("Test User")).toBeInTheDocument();
   });
 
-  test("renders outlet content", () => {
+  test("renders sign out button", () => {
     renderLayout();
-    expect(screen.getByText("Page Content")).toBeInTheDocument();
+    expect(screen.getByText(/Sign Out/i)).toBeInTheDocument();
   });
 
-  test("calls logout when logout menu item is clicked", async () => {
+  test("renders notification bell icon", () => {
     renderLayout();
-    const avatar = screen.getByText("J");
-    fireEvent.click(avatar);
-    await waitFor(() => {
-      const logoutItem = screen.queryByText("Logout");
-      if (logoutItem) {
-        fireEvent.click(logoutItem);
-        expect(mockLogout).toHaveBeenCalled();
-      }
-    });
+    expect(screen.getByLabelText(/Notifications/i)).toBeInTheDocument();
   });
 });

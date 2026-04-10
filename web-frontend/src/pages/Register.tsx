@@ -1,13 +1,10 @@
 // Modern Register page with enhanced UI
 
 import {
-  Apple as AppleIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Devices as DevicesIcon,
   Email as EmailIcon,
-  Facebook as FacebookIcon,
-  Google as GoogleIcon,
   Lock as LockIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
@@ -484,32 +481,17 @@ const Register: React.FC = () => {
 
                 <GridCompatibility container spacing={2}>
                   <GridCompatibility xs={4}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<GoogleIcon />}
-                      sx={{ py: 1.5 }}
-                    >
+                    <Button fullWidth variant="outlined" sx={{ py: 1.5 }}>
                       Google
                     </Button>
                   </GridCompatibility>
                   <GridCompatibility xs={4}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<FacebookIcon />}
-                      sx={{ py: 1.5 }}
-                    >
+                    <Button fullWidth variant="outlined" sx={{ py: 1.5 }}>
                       Facebook
                     </Button>
                   </GridCompatibility>
                   <GridCompatibility xs={4}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<AppleIcon />}
-                      sx={{ py: 1.5 }}
-                    >
+                    <Button fullWidth variant="outlined" sx={{ py: 1.5 }}>
                       Apple
                     </Button>
                   </GridCompatibility>
