@@ -1,8 +1,9 @@
-import {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,47 +17,42 @@ import {
   deleteSavingsGoal,
   getAccountSavingsGoals,
 } from '../services/api';
-import {commonStyles, responsiveWidth} from '../styles/commonStyles';
+import {colors, commonStyles} from '../styles/commonStyles';
 
-// Define the structure for savings goal data
 interface SavingsGoal {
   id: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
-  progress: number; // Percentage of completion (0-100)
+  progress: number;
   createdDate: string;
   targetDate?: string;
 }
 
-interface ContributionFormProps {
-  goalId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+interface Props {
+  route: {params?: {accountId?: string}};
 }
 
-const SavingsGoalsScreen = ({route}: any) => {
+type ScreenMode = 'list' | 'addGoal' | 'contribute';
+
+const SavingsGoalsScreen = ({route}: Props) => {
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showContributeForm, setShowContributeForm] = useState(false);
+  const [mode, setMode] = useState<ScreenMode>('list');
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [newGoalName, setNewGoalName] = useState('');
   const [newGoalAmount, setNewGoalAmount] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [contributionAmount, setContributionAmount] = useState('');
 
   const {userData} = useAuth();
 
-  // Get accountId from route params or use default from user data
-  const accountId =
-    route?.params?.accountId || (userData?.id ? userData.id : '');
+  const accountId = route?.params?.accountId || (userData?.id ?? '');
 
-  useEffect(() => {
-    fetchSavingsGoals();
-  }, [fetchSavingsGoals]);
-
-  const fetchSavingsGoals = async () => {
+  const fetchSavingsGoals = useCallback(async () => {
     if (!accountId) {
       setLoading(false);
       setError('No account ID available');
@@ -67,76 +63,132 @@ const SavingsGoalsScreen = ({route}: any) => {
     setError(null);
     try {
       const response = await getAccountSavingsGoals(accountId);
-      setSavingsGoals(response.data);
-    } catch (err: any) {
+      setSavingsGoals(Array.isArray(response.data) ? response.data : []);
+    } catch (err: unknown) {
+      const e = err as {
+        response?: {data?: {message?: string}};
+        message?: string;
+      };
       console.error('Failed to fetch savings goals:', err);
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
+        e.response?.data?.message ||
+        e.message ||
         'Failed to load savings goals.';
       setError(errorMessage);
-      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accountId]);
+
+  useEffect(() => {
+    fetchSavingsGoals();
+  }, [fetchSavingsGoals]);
 
   const handleAddGoal = async () => {
-    if (!newGoalName.trim() || !newGoalAmount.trim()) {
-      Alert.alert('Error', 'Please enter both goal name and target amount.');
+    setFormError('');
+
+    if (!newGoalName.trim()) {
+      setFormError('Please enter a goal name.');
       return;
     }
 
     const targetAmount = parseFloat(newGoalAmount);
-    if (Number.isNaN(targetAmount) || targetAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid target amount.');
+    if (!newGoalAmount || isNaN(targetAmount) || targetAmount <= 0) {
+      setFormError('Please enter a valid target amount greater than $0.');
       return;
     }
 
+    if (targetDate) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (
+        !dateRegex.test(targetDate) ||
+        isNaN(new Date(targetDate).getTime())
+      ) {
+        setFormError('Target date must be in YYYY-MM-DD format.');
+        return;
+      }
+      if (new Date(targetDate) <= new Date()) {
+        setFormError('Target date must be in the future.');
+        return;
+      }
+    }
+
+    setFormSubmitting(true);
     try {
-      setLoading(true);
       await createSavingsGoal({
         accountId,
-        name: newGoalName,
+        name: newGoalName.trim(),
         targetAmount,
         targetDate: targetDate || undefined,
       });
 
-      // Refresh the goals list
       await fetchSavingsGoals();
-
-      // Reset form
       setNewGoalName('');
       setNewGoalAmount('');
       setTargetDate('');
-      setShowAddForm(false);
-
-      Alert.alert('Success', 'Savings goal created successfully!');
-    } catch (err: any) {
-      console.error('Failed to create savings goal:', err);
+      setMode('list');
+      Alert.alert(
+        'Goal Created',
+        `"${newGoalName.trim()}" savings goal has been created successfully!`,
+      );
+    } catch (err: unknown) {
+      const e = err as {
+        response?: {data?: {message?: string}};
+        message?: string;
+      };
       const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
+        e.response?.data?.message ||
+        e.message ||
         'Failed to create savings goal.';
-      Alert.alert('Error', errorMessage);
-      setLoading(false);
+      setFormError(errorMessage);
+    } finally {
+      setFormSubmitting(false);
     }
   };
 
-  const handleContribute = (goalId: string) => {
-    setSelectedGoalId(goalId);
-    setShowContributeForm(true);
+  const handleContribute = async () => {
+    setFormError('');
+
+    if (!selectedGoalId) {
+      return;
+    }
+
+    const amount = parseFloat(contributionAmount);
+    if (!contributionAmount || isNaN(amount) || amount <= 0) {
+      setFormError('Please enter a valid contribution amount.');
+      return;
+    }
+
+    setFormSubmitting(true);
+    try {
+      await contributeTosavingsGoal(selectedGoalId, {amount});
+      await fetchSavingsGoals();
+      setContributionAmount('');
+      setSelectedGoalId(null);
+      setMode('list');
+      Alert.alert(
+        'Contribution Added',
+        `$${amount.toFixed(2)} has been added to your savings goal!`,
+      );
+    } catch (err: unknown) {
+      const e = err as {
+        response?: {data?: {message?: string}};
+        message?: string;
+      };
+      const errorMessage =
+        e.response?.data?.message || e.message || 'Failed to add contribution.';
+      setFormError(errorMessage);
+    } finally {
+      setFormSubmitting(false);
+    }
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
+  const handleDeleteGoal = (goalId: string, goalName: string) => {
     Alert.alert(
       'Delete Goal',
-      'Are you sure you want to delete this savings goal?',
+      `Are you sure you want to delete "${goalName}"? This action cannot be undone.`,
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        {text: 'Cancel', style: 'cancel'},
         {
           text: 'Delete',
           style: 'destructive',
@@ -145,12 +197,15 @@ const SavingsGoalsScreen = ({route}: any) => {
               setLoading(true);
               await deleteSavingsGoal(goalId);
               await fetchSavingsGoals();
-              Alert.alert('Success', 'Savings goal deleted successfully!');
-            } catch (err: any) {
-              console.error('Failed to delete savings goal:', err);
+              Alert.alert('Deleted', 'Savings goal has been deleted.');
+            } catch (err: unknown) {
+              const e = err as {
+                response?: {data?: {message?: string}};
+                message?: string;
+              };
               const errorMessage =
-                err.response?.data?.message ||
-                err.message ||
+                e.response?.data?.message ||
+                e.message ||
                 'Failed to delete savings goal.';
               Alert.alert('Error', errorMessage);
               setLoading(false);
@@ -161,395 +216,462 @@ const SavingsGoalsScreen = ({route}: any) => {
     );
   };
 
-  const handleContributionSuccess = async () => {
-    setShowContributeForm(false);
-    setSelectedGoalId(null);
-    await fetchSavingsGoals();
-  };
-
-  const renderSavingsGoalItem = ({item}: {item: SavingsGoal}) => (
-    <View style={styles.goalItem}>
-      <Text style={styles.goalName}>{item.name}</Text>
-      <View style={styles.goalDetails}>
-        <Text style={styles.goalAmount}>
-          $
-          {item.currentAmount.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{' '}
-          / $
-          {item.targetAmount.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-        <Text style={styles.goalDate}>
-          Created: {new Date(item.createdDate).toLocaleDateString()}
-        </Text>
-        {item.targetDate && (
-          <Text style={styles.goalDate}>
-            Target: {new Date(item.targetDate).toLocaleDateString()}
-          </Text>
-        )}
-      </View>
-
-      {/* Progress bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, {width: `${item.progress}%`}]} />
-      </View>
-      <Text style={styles.progressText}>{item.progress}% Complete</Text>
-
-      {/* Action buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.contributeButton]}
-          onPress={() => handleContribute(item.id)}>
-          <Text style={styles.actionButtonText}>Contribute</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteGoal(item.id)}>
-          <Text style={styles.actionButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Contribution Form Component
-  const ContributionForm = ({
-    goalId,
-    onSuccess,
-    onCancel,
-  }: ContributionFormProps) => {
-    const [amount, setAmount] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async () => {
-      if (!amount.trim()) {
-        Alert.alert('Error', 'Please enter a contribution amount.');
-        return;
-      }
-
-      const contributionAmount = parseFloat(amount);
-      if (Number.isNaN(contributionAmount) || contributionAmount <= 0) {
-        Alert.alert('Error', 'Please enter a valid amount.');
-        return;
-      }
-
-      try {
-        setSubmitting(true);
-        await contributeTosavingsGoal(goalId, {amount: contributionAmount});
-        Alert.alert('Success', 'Contribution added successfully!');
-        onSuccess();
-      } catch (err: any) {
-        console.error('Failed to add contribution:', err);
-        const errorMessage =
-          err.response?.data?.message ||
-          err.message ||
-          'Failed to add contribution.';
-        Alert.alert('Error', errorMessage);
-      } finally {
-        setSubmitting(false);
-      }
-    };
+  const renderGoalItem = ({item}: {item: SavingsGoal}) => {
+    const clampedProgress = Math.min(100, Math.max(0, item.progress));
+    const isComplete = clampedProgress >= 100;
 
     return (
-      <View style={styles.formContainer}>
-        <Text style={styles.formTitle}>Add Contribution</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Amount ($)"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          autoFocus
-        />
-        <View style={styles.formButtons}>
+      <View style={styles.goalCard}>
+        <View style={commonStyles.spaceBetween}>
+          <Text style={styles.goalName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {isComplete && (
+            <View style={styles.completeBadge}>
+              <Text style={styles.completeBadgeText}>✓ Done</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.amountsRow}>
+          <View>
+            <Text style={styles.amountLabel}>Saved</Text>
+            <Text style={styles.currentAmount}>
+              $
+              {item.currentAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Text>
+          </View>
+          <View style={styles.amountDivider} />
+          <View style={{alignItems: 'flex-end'}}>
+            <Text style={styles.amountLabel}>Goal</Text>
+            <Text style={styles.targetAmount}>
+              $
+              {item.targetAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.progressBarBg}>
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                width: `${clampedProgress}%`,
+                backgroundColor: isComplete ? colors.success : colors.primary,
+              },
+            ]}
+          />
+        </View>
+        <View style={commonStyles.spaceBetween}>
+          <Text style={styles.progressText}>
+            {clampedProgress.toFixed(0)}% complete
+          </Text>
+          {item.targetDate ? (
+            <Text style={styles.targetDateText}>
+              by{' '}
+              {new Date(item.targetDate).toLocaleDateString('en-US', {
+                month: 'short',
+                year: 'numeric',
+              })}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.goalActions}>
           <TouchableOpacity
-            style={[commonStyles.button, styles.cancelButton]}
-            onPress={onCancel}
-            disabled={submitting}>
-            <Text style={commonStyles.buttonText}>Cancel</Text>
+            style={styles.contributeBtn}
+            onPress={() => {
+              setSelectedGoalId(item.id);
+              setContributionAmount('');
+              setFormError('');
+              setMode('contribute');
+            }}
+            activeOpacity={0.75}>
+            <Text style={styles.contributeBtnText}>+ Contribute</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[commonStyles.button, styles.saveButton]}
-            onPress={handleSubmit}
-            disabled={submitting}>
-            <Text style={commonStyles.buttonText}>
-              {submitting ? 'Processing...' : 'Add Contribution'}
-            </Text>
+            style={styles.deleteBtn}
+            onPress={() => handleDeleteGoal(item.id, item.name)}
+            activeOpacity={0.75}>
+            <Text style={styles.deleteBtnText}>Delete</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   };
 
-  if (loading && !showAddForm && !showContributeForm) {
+  if (loading && mode === 'list') {
     return (
-      <View style={[commonStyles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text>Loading Savings Goals...</Text>
+      <View style={commonStyles.centerContent}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading Savings Goals...</Text>
       </View>
     );
   }
 
-  if (error && !showAddForm && !showContributeForm) {
+  if (mode === 'addGoal') {
     return (
-      <View style={[commonStyles.container, styles.centerContent]}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <TouchableOpacity
-          style={[commonStyles.button, styles.retryButton]}
-          onPress={fetchSavingsGoals}>
-          <Text style={commonStyles.buttonText}>Retry</Text>
-        </TouchableOpacity>
+      <ScrollView
+        style={commonStyles.container}
+        keyboardShouldPersistTaps="handled">
+        <View style={commonStyles.spaceBetween}>
+          <Text style={styles.screenTitle}>New Goal</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setMode('list');
+              setFormError('');
+            }}
+            style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {formError ? (
+          <View style={commonStyles.errorContainer}>
+            <Text style={commonStyles.errorText}>{formError}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.formLabel}>Goal Name</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="e.g. Vacation Fund, Emergency Fund"
+          value={newGoalName}
+          onChangeText={setNewGoalName}
+          placeholderTextColor={colors.textTertiary}
+          autoCapitalize="words"
+        />
+
+        <Text style={styles.formLabel}>Target Amount ($)</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="e.g. 5000"
+          value={newGoalAmount}
+          onChangeText={setNewGoalAmount}
+          keyboardType="decimal-pad"
+          placeholderTextColor={colors.textTertiary}
+        />
+
+        <Text style={styles.formLabel}>Target Date (optional)</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="YYYY-MM-DD"
+          value={targetDate}
+          onChangeText={setTargetDate}
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="numbers-and-punctuation"
+          maxLength={10}
+        />
+
+        <View style={styles.formButtons}>
+          <TouchableOpacity
+            style={[
+              commonStyles.button,
+              commonStyles.buttonOutline,
+              styles.cancelBtn,
+            ]}
+            onPress={() => {
+              setMode('list');
+              setFormError('');
+            }}
+            disabled={formSubmitting}>
+            <Text style={commonStyles.buttonTextOutline}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              commonStyles.button,
+              styles.saveBtn,
+              formSubmitting && styles.disabledBtn,
+            ]}
+            onPress={handleAddGoal}
+            disabled={formSubmitting}>
+            {formSubmitting ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Text style={commonStyles.buttonText}>Create Goal</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  if (mode === 'contribute' && selectedGoalId) {
+    const goal = savingsGoals.find(g => g.id === selectedGoalId);
+    return (
+      <View style={commonStyles.container}>
+        <View style={commonStyles.spaceBetween}>
+          <Text style={styles.screenTitle}>Add Contribution</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setMode('list');
+              setSelectedGoalId(null);
+              setFormError('');
+            }}
+            style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {goal ? (
+          <View style={[commonStyles.card, styles.contributionGoalCard]}>
+            <Text style={styles.contributionGoalName}>{goal.name}</Text>
+            <Text style={styles.contributionGoalProgress}>
+              $
+              {goal.currentAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}{' '}
+              of $
+              {goal.targetAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}
+            </Text>
+          </View>
+        ) : null}
+
+        {formError ? (
+          <View style={commonStyles.errorContainer}>
+            <Text style={commonStyles.errorText}>{formError}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.formLabel}>Contribution Amount ($)</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="Enter amount"
+          value={contributionAmount}
+          onChangeText={setContributionAmount}
+          keyboardType="decimal-pad"
+          placeholderTextColor={colors.textTertiary}
+          autoFocus
+        />
+
+        <View style={styles.formButtons}>
+          <TouchableOpacity
+            style={[
+              commonStyles.button,
+              commonStyles.buttonOutline,
+              styles.cancelBtn,
+            ]}
+            onPress={() => {
+              setMode('list');
+              setSelectedGoalId(null);
+              setFormError('');
+            }}
+            disabled={formSubmitting}>
+            <Text style={commonStyles.buttonTextOutline}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              commonStyles.button,
+              styles.saveBtn,
+              formSubmitting && styles.disabledBtn,
+            ]}
+            onPress={handleContribute}
+            disabled={formSubmitting}>
+            {formSubmitting ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Text style={commonStyles.buttonText}>Add</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={commonStyles.container}>
-      <Text style={commonStyles.titleText}>Your Savings Goals</Text>
-
-      {/* Add Goal Button */}
-      {!showAddForm && !showContributeForm && (
+      <View style={commonStyles.spaceBetween}>
+        <Text style={styles.screenTitle}>
+          {savingsGoals.length > 0
+            ? `${savingsGoals.length} Goal${savingsGoals.length !== 1 ? 's' : ''}`
+            : 'Savings Goals'}
+        </Text>
         <TouchableOpacity
-          style={[commonStyles.button, styles.addButton]}
-          onPress={() => setShowAddForm(true)}>
-          <Text style={commonStyles.buttonText}>Add New Savings Goal</Text>
+          style={styles.addButton}
+          onPress={() => {
+            setMode('addGoal');
+            setFormError('');
+          }}
+          activeOpacity={0.85}>
+          <Text style={styles.addButtonText}>+ New Goal</Text>
         </TouchableOpacity>
-      )}
+      </View>
 
-      {/* Add Goal Form */}
-      {showAddForm && (
-        <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>Create New Savings Goal</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Goal Name (e.g., Vacation Fund)"
-            value={newGoalName}
-            onChangeText={setNewGoalName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Target Amount ($)"
-            value={newGoalAmount}
-            onChangeText={setNewGoalAmount}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Target Date (YYYY-MM-DD, optional)"
-            value={targetDate}
-            onChangeText={setTargetDate}
-          />
-          <View style={styles.formButtons}>
+      {error ? (
+        <View style={commonStyles.errorContainer}>
+          <Text style={commonStyles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <FlatList
+        data={savingsGoals}
+        renderItem={renderGoalItem}
+        keyExtractor={item => item.id}
+        ListEmptyComponent={
+          <View style={commonStyles.emptyStateContainer}>
+            <Text style={styles.emptyIcon}>🎯</Text>
+            <Text style={commonStyles.emptyStateTitle}>No Savings Goals</Text>
+            <Text style={commonStyles.emptyStateSubtitle}>
+              Create a savings goal to start tracking your financial milestones.
+            </Text>
             <TouchableOpacity
-              style={[commonStyles.button, styles.cancelButton]}
-              onPress={() => {
-                setShowAddForm(false);
-                setNewGoalName('');
-                setNewGoalAmount('');
-                setTargetDate('');
-              }}>
-              <Text style={commonStyles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[commonStyles.button, styles.saveButton]}
-              onPress={handleAddGoal}>
-              <Text style={commonStyles.buttonText}>Save Goal</Text>
+              style={[commonStyles.button, styles.emptyAddBtn]}
+              onPress={() => setMode('addGoal')}>
+              <Text style={commonStyles.buttonText}>Create First Goal</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-
-      {/* Contribution Form */}
-      {showContributeForm && selectedGoalId && (
-        <ContributionForm
-          goalId={selectedGoalId}
-          onSuccess={handleContributionSuccess}
-          onCancel={() => {
-            setShowContributeForm(false);
-            setSelectedGoalId(null);
-          }}
-        />
-      )}
-
-      {/* Goals List */}
-      {!showAddForm && !showContributeForm && (
-        <FlatList
-          data={savingsGoals}
-          renderItem={renderSavingsGoalItem}
-          keyExtractor={item => item.id}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No savings goals found.</Text>
-              <Text style={styles.emptySubText}>
-                Create a goal to start saving!
-              </Text>
-            </View>
-          }
-          style={styles.listContainer}
-          contentContainerStyle={
-            savingsGoals.length === 0 ? styles.emptyListContent : null
-          }
-        />
-      )}
+        }
+        contentContainerStyle={
+          savingsGoals.length === 0 ? {flex: 1} : {paddingBottom: 24}
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };
 
-// Add specific styles for SavingsGoalsScreen
 const styles = StyleSheet.create({
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#6c757d',
-    marginBottom: 8,
-  },
-  emptySubText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#adb5bd',
-  },
-  emptyListContent: {
-    flex: 1,
-    justifyContent: 'center',
+  loadingText: {marginTop: 12, fontSize: 15, color: colors.textSecondary},
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 16,
+    letterSpacing: -0.5,
   },
   addButton: {
-    marginBottom: 20,
-    backgroundColor: '#28a745',
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    marginBottom: 16,
   },
-  retryButton: {
-    marginTop: 10,
-    backgroundColor: '#6c757d',
-  },
-  listContainer: {
-    flex: 1,
-  },
-  goalItem: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: responsiveWidth(4),
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 1.0,
-    elevation: 1,
+  addButtonText: {color: colors.white, fontWeight: '700', fontSize: 14},
+  emptyIcon: {fontSize: 48, marginBottom: 8},
+  emptyAddBtn: {marginTop: 16, minWidth: 200},
+  goalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: colors.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
   goalName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: colors.textPrimary,
+    flex: 1,
+    marginRight: 8,
+  },
+  completeBadge: {
+    backgroundColor: colors.successLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  completeBadgeText: {fontSize: 12, color: colors.success, fontWeight: '700'},
+  amountsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 14,
+  },
+  amountLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  currentAmount: {fontSize: 20, fontWeight: '700', color: colors.primary},
+  targetAmount: {fontSize: 16, fontWeight: '600', color: colors.textSecondary},
+  amountDivider: {width: 1, height: 36, backgroundColor: colors.borderLight},
+  progressBarBg: {
+    height: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {height: '100%', borderRadius: 4},
+  progressText: {fontSize: 12, color: colors.textSecondary, fontWeight: '500'},
+  targetDateText: {fontSize: 12, color: colors.textSecondary},
+  goalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  contributeBtn: {
+    flex: 1,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  contributeBtnText: {color: colors.primary, fontWeight: '700', fontSize: 14},
+  deleteBtn: {
+    paddingHorizontal: 16,
+    backgroundColor: colors.errorLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  deleteBtnText: {color: colors.error, fontWeight: '600', fontSize: 14},
+  // Form styles
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
-  goalDetails: {
-    marginBottom: 10,
+  formButtons: {flexDirection: 'row', gap: 12, marginTop: 8},
+  cancelBtn: {flex: 1},
+  saveBtn: {
+    flex: 1,
+    shadowColor: colors.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  goalAmount: {
-    fontSize: 14,
-    color: '#555',
+  disabledBtn: {opacity: 0.65},
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  closeBtnText: {fontSize: 15, color: colors.textSecondary, fontWeight: '600'},
+  contributionGoalCard: {
+    marginBottom: 16,
+    backgroundColor: colors.primaryLight,
+  },
+  contributionGoalName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.primary,
     marginBottom: 4,
   },
-  goalDate: {
-    fontSize: 12,
-    color: '#6c757d',
-  },
-  progressBarContainer: {
-    height: 10,
-    backgroundColor: '#e9ecef',
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginBottom: 5,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#17a2b8',
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6c757d',
-    textAlign: 'right',
-    marginBottom: 10,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  contributeButton: {
-    backgroundColor: '#007bff',
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  formContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: responsiveWidth(4),
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
-  },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333',
-  },
-  input: {
-    height: 45,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 10,
-    backgroundColor: '#ffffff',
-  },
-  formButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    marginRight: 10,
-    backgroundColor: '#6c757d',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#28a745',
-  },
+  contributionGoalProgress: {fontSize: 14, color: colors.primary, opacity: 0.8},
 });
 
 export default SavingsGoalsScreen;

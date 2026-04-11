@@ -1,6 +1,7 @@
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {ActivityIndicator, View} from 'react-native';
+import React from 'react';
+import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import AccountDetailsScreen from '../screens/AccountDetailsScreen';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -11,9 +12,8 @@ import SavingsGoalsScreen from '../screens/SavingsGoalsScreen';
 import TransactionDetailsScreen from '../screens/TransactionDetailsScreen';
 import TransactionFiltersScreen from '../screens/TransactionFiltersScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
-import {colors, commonStyles} from '../styles/commonStyles';
+import {colors} from '../styles/commonStyles';
 
-// Define the type for the stack navigator parameters
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -22,7 +22,7 @@ export type RootStackParamList = {
   Transactions: {accountId?: string};
   TransactionDetails: {
     transactionId: string;
-    transaction?: any;
+    transaction?: Record<string, unknown>;
   };
   TransactionFilters: {
     currentFilter?: {
@@ -30,7 +30,11 @@ export type RootStackParamList = {
       endDate: string;
       type?: string;
     };
-    onFilterApply?: (filter: any) => void;
+    onFilterApply?: (filter: {
+      startDate: string;
+      endDate: string;
+      type?: string;
+    }) => void;
   };
   Loans: {accountId?: string};
   SavingsGoals: {accountId?: string};
@@ -42,13 +46,8 @@ const AppNavigator = () => {
   const {userToken, isLoading} = useAuth();
 
   if (isLoading) {
-    // Show a loading screen while checking token
     return (
-      <View
-        style={[
-          commonStyles.container,
-          {justifyContent: 'center', alignItems: 'center'},
-        ]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -56,9 +55,13 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: {backgroundColor: colors.primary},
+          headerTintColor: colors.background,
+          headerTitleStyle: {fontWeight: '600'},
+        }}>
         {userToken == null ? (
-          // No token found, user isn't signed in
           <>
             <Stack.Screen
               name="Login"
@@ -75,12 +78,11 @@ const AppNavigator = () => {
             />
           </>
         ) : (
-          // User is signed in
           <>
             <Stack.Screen
               name="Dashboard"
               component={DashboardScreen}
-              options={{title: 'Dashboard'}}
+              options={{title: 'FinovaBank', headerBackVisible: false}}
             />
             <Stack.Screen
               name="AccountDetails"
@@ -118,5 +120,14 @@ const AppNavigator = () => {
     </NavigationContainer>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+});
 
 export default AppNavigator;

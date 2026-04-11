@@ -203,3 +203,249 @@ bin/
 
 # Ruff cache
 .ruff_cache/
+
+
+# ===============================================================
+# ADDITIONS
+# ===============================================================
+
+# ---------------------------------------------------------------
+# Secrets & credentials
+# ---------------------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+*.cer
+*.der
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+credentials.yaml
+service-account.json
+*_rsa
+*_rsa.pub
+*_ed25519
+*_ed25519.pub
+.netrc
+kubeconfig
+*.kubeconfig
+.vault-token
+
+# ---------------------------------------------------------------
+# Editors
+# ---------------------------------------------------------------
+.cursor/
+*.swo
+.netrwhist
+
+# ---------------------------------------------------------------
+# Web frontend (Next.js, Nuxt, SvelteKit, Vite, Parcel, Turbo)
+# ---------------------------------------------------------------
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+.vite/
+.parcel-cache/
+.turbo/
+storybook-static/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Yarn PnP
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+!.yarn/releases
+!.yarn/plugins
+
+# Frontend test artifacts
+coverage/
+lcov.info
+*.lcov
+test-results/
+playwright-report/
+cypress/videos/
+cypress/screenshots/
+
+# ---------------------------------------------------------------
+# Mobile (React Native, Expo, Flutter, iOS, Android)
+# ---------------------------------------------------------------
+ios/build/
+ios/Pods/
+ios/DerivedData/
+ios/*.xcarchive
+ios/Podfile.lock
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+*.aar
+*.apk
+*.ipa
+*.aab
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.dSYM.zip
+*.dSYM
+*.hmap
+
+# ---------------------------------------------------------------
+# Blockchain (Foundry, Anchor, OpenZeppelin)
+# ---------------------------------------------------------------
+deployments/localhost/
+deployments/hardhat/
+broadcast/
+!broadcast/*/31337/
+lib/
+.anchor/
+.openzeppelin/
+flattened/
+flat/
+coverage.json
+gas-report.txt
+gasreport.txt
+
+# ---------------------------------------------------------------
+# ML / AI / Data Science
+# ---------------------------------------------------------------
+
+# Additional virtual environments
+.conda/
+conda-env/
+
+# Data files
+data/raw/
+data/processed/
+data/interim/
+data/external/
+datasets/
+*.parquet
+*.feather
+*.arrow
+*.hdf
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+
+# Model weights & checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.onnx
+*.pb
+*.tflite
+*.mlmodel
+*.keras
+checkpoints/
+saved_models/
+weights/
+model_weights/
+runs/
+
+# Experiment tracking
+mlruns/
+.mlflow/
+wandb/
+lightning_logs/
+outputs/
+multirun/
+.hydra/
+ray_results/
+
+# DVC
+.dvc/
+*.dvc
+dvc.lock
+
+# HuggingFace / PyTorch cache
+.cache/huggingface/
+.cache/torch/
+
+# CUDA
+*.cu.o
+*.fatbin
+*.ptx
+
+# Profiling
+*.prof
+*.lprof
+
+# Additional type checkers
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ---------------------------------------------------------------
+# DevOps additions
+# ---------------------------------------------------------------
+crash.*.log
+!*.tfvars.example
+*.tfstate.backup
+charts/*.tgz
+.pulumi/
+
+# ---------------------------------------------------------------
+# Databases
+# ---------------------------------------------------------------
+dump.rdb
+*.dump
+*.bak
+redis-data/
+postgres-data/
+mongo-data/
+mysql-data/
+pgdata/
+
+# ---------------------------------------------------------------
+# Documentation builds
+# ---------------------------------------------------------------
+site/
+_site/
+docs/_build/
+docs/build/
+sphinx-build/
+
+# ---------------------------------------------------------------
+# Test reports
+# ---------------------------------------------------------------
+allure-results/
+allure-report/
+*.tap
+*.junit.xml
+*.xunit.xml

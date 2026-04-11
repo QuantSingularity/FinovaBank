@@ -1,20 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axios, {AxiosError} from 'axios';
 import Config from './config';
 
-// Create a configurable API client
 const apiClient = axios.create({
   baseURL: Config.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: Config.API_TIMEOUT,
 });
 
-// Storage keys
 const TOKEN_STORAGE_KEY = 'finovabank_user_token';
 
-// Add a request interceptor to include auth tokens
 apiClient.interceptors.request.use(
   async config => {
     try {
@@ -27,31 +24,28 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  error => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   },
 );
 
-// Add a response interceptor to handle common errors
 apiClient.interceptors.response.use(
   response => response,
-  async error => {
-    // Handle specific error cases
+  async (error: AxiosError) => {
     if (error.response) {
-      // Server responded with a status code outside of 2xx range
       if (error.response.status === 401) {
-        // Unauthorized - clear token
         try {
-          await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+          await AsyncStorage.multiRemove([
+            TOKEN_STORAGE_KEY,
+            'finovabank_user_data',
+          ]);
         } catch (e) {
           console.error('Failed to clear token:', e);
         }
       }
     } else if (error.request) {
-      // Request was made but no response received
       console.error('Network Error:', error.message);
     } else {
-      // Something else happened
       console.error('Request Error:', error.message);
     }
     return Promise.reject(error);
@@ -59,15 +53,18 @@ apiClient.interceptors.response.use(
 );
 
 // --- Account Management Service ---
-export const createAccount = (data: any) => apiClient.post('/accounts', data);
+export const createAccount = (data: Record<string, unknown>) =>
+  apiClient.post('/accounts', data);
 export const getAccountDetails = (accountId: string) =>
   apiClient.get(`/accounts/${accountId}`);
-export const updateAccountDetails = (accountId: string, data: any) =>
-  apiClient.put(`/accounts/${accountId}`, data);
+export const updateAccountDetails = (
+  accountId: string,
+  data: Record<string, unknown>,
+) => apiClient.put(`/accounts/${accountId}`, data);
 export const getUserAccounts = () => apiClient.get('/accounts');
 
 // --- Transaction Service ---
-export const createTransaction = (data: any) =>
+export const createTransaction = (data: Record<string, unknown>) =>
   apiClient.post('/transactions', data);
 export const getTransactionDetails = (transactionId: string) =>
   apiClient.get(`/transactions/${transactionId}`);
@@ -83,7 +80,8 @@ export const getAccountTransactions = (
 ) => apiClient.get(`/accounts/${accountId}/transactions`, {params});
 
 // --- Loan Management Service ---
-export const applyForLoan = (data: any) => apiClient.post('/loans', data);
+export const applyForLoan = (data: Record<string, unknown>) =>
+  apiClient.post('/loans', data);
 export const getLoanDetails = (loanId: string) =>
   apiClient.get(`/loans/${loanId}`);
 export const getAccountLoans = (accountId: string) =>
@@ -96,12 +94,14 @@ export const calculateLoanPayment = (data: {
 }) => apiClient.post('/loans/calculate', data);
 
 // --- Savings Goals Service ---
-export const createSavingsGoal = (data: any) =>
+export const createSavingsGoal = (data: Record<string, unknown>) =>
   apiClient.post('/savings', data);
 export const getAccountSavingsGoals = (accountId: string) =>
   apiClient.get(`/accounts/${accountId}/savings`);
-export const updateSavingsGoal = (goalId: string, data: any) =>
-  apiClient.put(`/savings/${goalId}`, data);
+export const updateSavingsGoal = (
+  goalId: string,
+  data: Record<string, unknown>,
+) => apiClient.put(`/savings/${goalId}`, data);
 export const deleteSavingsGoal = (goalId: string) =>
   apiClient.delete(`/savings/${goalId}`);
 export const contributeTosavingsGoal = (
@@ -147,7 +147,7 @@ export const verifyEmail = (token: string) =>
 
 // --- User Profile ---
 export const getUserProfile = () => apiClient.get('/users/profile');
-export const updateUserProfile = (data: any) =>
+export const updateUserProfile = (data: Record<string, unknown>) =>
   apiClient.put('/users/profile', data);
 export const changePassword = (data: {
   currentPassword: string;

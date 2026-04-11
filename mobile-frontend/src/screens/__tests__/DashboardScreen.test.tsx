@@ -1,75 +1,124 @@
-import 'react-native';
+import React from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
+import {useAuth} from '../../context/AuthContext';
 import DashboardScreen from '../../screens/DashboardScreen';
+import {getUserAccounts} from '../../services/api';
 
+jest.mock('../../services/api');
+jest.mock('../../context/AuthContext');
 jest.mock('@react-navigation/native');
 
 describe('DashboardScreen', () => {
   const mockNavigate = jest.fn();
+  const mockLogout = jest.fn();
+  const mockGetUserAccounts = getUserAccounts as jest.MockedFunction<
+    typeof getUserAccounts
+  >;
+
+  const mockAccounts = [
+    {
+      id: 'acc-1',
+      balance: 5420.5,
+      accountNumber: '**** 1234',
+      accountType: 'Checking',
+      status: 'ACTIVE',
+    },
+  ];
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({
+      userData: {
+        id: 'user-1',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+      },
+      logout: mockLogout,
+    });
     (useNavigation as jest.Mock).mockReturnValue({
       navigate: mockNavigate,
     });
+    mockGetUserAccounts.mockResolvedValue({data: mockAccounts} as any);
   });
 
-  it('renders correctly', () => {
+  it('renders loading state initially', () => {
+    mockGetUserAccounts.mockImplementation(() => new Promise(() => {}));
     const {getByText} = render(<DashboardScreen />);
-
-    expect(getByText('Welcome Back!')).toBeTruthy();
-    expect(getByText('Account Summary')).toBeTruthy();
-    expect(getByText('Quick Actions')).toBeTruthy();
-    // The balance is split across multiple Text components, so we check for the number part
-    expect(getByText('5420.50')).toBeTruthy();
-    expect(getByText('Account: **** **** **** 1234')).toBeTruthy();
+    expect(getByText('Loading your dashboard...')).toBeTruthy();
   });
 
-  it('renders all quick action buttons', () => {
+  it('renders dashboard after successful fetch', async () => {
     const {getByText} = render(<DashboardScreen />);
-
-    expect(getByText('View Transactions')).toBeTruthy();
-    expect(getByText('Apply for Loan')).toBeTruthy();
-    expect(getByText('Manage Savings')).toBeTruthy();
-    expect(getByText('Account Details')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText('Total Balance')).toBeTruthy();
+      expect(getByText('Quick Actions')).toBeTruthy();
+    });
   });
 
-  it('navigates to Transactions screen when View Transactions is pressed', () => {
+  it('greets user by first name', async () => {
     const {getByText} = render(<DashboardScreen />);
-    const transactionsButton = getByText('View Transactions');
-
-    fireEvent.press(transactionsButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith('Transactions', undefined);
+    await waitFor(() => {
+      expect(getByText('John')).toBeTruthy();
+    });
   });
 
-  it('navigates to Loans screen when Apply for Loan is pressed', () => {
+  it('displays total balance from accounts', async () => {
     const {getByText} = render(<DashboardScreen />);
-    const loansButton = getByText('Apply for Loan');
-
-    fireEvent.press(loansButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith('Loans', undefined);
+    await waitFor(() => {
+      expect(getByText('$5,420.50')).toBeTruthy();
+    });
   });
 
-  it('navigates to SavingsGoals screen when Manage Savings is pressed', () => {
+  it('renders all quick action buttons', async () => {
     const {getByText} = render(<DashboardScreen />);
-    const savingsButton = getByText('Manage Savings');
-
-    fireEvent.press(savingsButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith('SavingsGoals', undefined);
+    await waitFor(() => {
+      expect(getByText('Transactions')).toBeTruthy();
+      expect(getByText('Loans')).toBeTruthy();
+      expect(getByText('Savings')).toBeTruthy();
+      expect(getByText('Account')).toBeTruthy();
+    });
   });
 
-  it('navigates to AccountDetails screen with accountId when Account Details is pressed', () => {
+  it('navigates to Transactions when pressed', async () => {
     const {getByText} = render(<DashboardScreen />);
-    const accountDetailsButton = getByText('Account Details');
+    await waitFor(() => expect(getByText('Transactions')).toBeTruthy());
+    fireEvent.press(getByText('Transactions'));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Transactions',
+      expect.any(Object),
+    );
+  });
 
-    fireEvent.press(accountDetailsButton);
+  it('navigates to Loans when pressed', async () => {
+    const {getByText} = render(<DashboardScreen />);
+    await waitFor(() => expect(getByText('Loans')).toBeTruthy());
+    fireEvent.press(getByText('Loans'));
+    expect(mockNavigate).toHaveBeenCalledWith('Loans', expect.any(Object));
+  });
 
-    expect(mockNavigate).toHaveBeenCalledWith('AccountDetails', {
-      accountId: '1',
+  it('calls logout when Sign Out is pressed', async () => {
+    mockLogout.mockResolvedValueOnce(undefined);
+    const {getByText} = render(<DashboardScreen />);
+    await waitFor(() => expect(getByText('Sign Out')).toBeTruthy());
+    fireEvent.press(getByText('Sign Out'));
+    expect(mockLogout).toHaveBeenCalled();
+  });
+
+  it('handles API error gracefully', async () => {
+    mockGetUserAccounts.mockRejectedValueOnce(new Error('Network error'));
+    const {getByText} = render(<DashboardScreen />);
+    await waitFor(() => {
+      expect(getByText('Total Balance')).toBeTruthy();
+    });
+  });
+
+  it('shows $0.00 balance when no accounts returned', async () => {
+    mockGetUserAccounts.mockResolvedValueOnce({data: []} as any);
+    const {getByText} = render(<DashboardScreen />);
+    await waitFor(() => {
+      expect(getByText('$0.00')).toBeTruthy();
     });
   });
 });

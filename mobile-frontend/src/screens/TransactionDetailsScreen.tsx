@@ -3,7 +3,7 @@ import {
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
-import {useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,13 +18,11 @@ import type {RootStackParamList} from '../navigation/AppNavigator';
 import {getTransactionDetails} from '../services/api';
 import {colors, commonStyles} from '../styles/commonStyles';
 
-// Define the route prop type for this screen
 type TransactionDetailsScreenRouteProp = RouteProp<
   RootStackParamList,
   'TransactionDetails'
 >;
 
-// Define the structure for transaction details
 interface TransactionDetails {
   id: string;
   date: string;
@@ -43,6 +41,21 @@ interface TransactionDetails {
   updatedAt: string;
 }
 
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case 'COMPLETED':
+      return {color: colors.success, bg: colors.successLight, icon: '✓'};
+    case 'PENDING':
+      return {color: colors.warning, bg: colors.warningLight, icon: '⏳'};
+    case 'FAILED':
+      return {color: colors.error, bg: colors.errorLight, icon: '✕'};
+    case 'CANCELLED':
+      return {color: colors.textSecondary, bg: colors.surface, icon: '✕'};
+    default:
+      return {color: colors.textSecondary, bg: colors.surface, icon: '?'};
+  }
+};
+
 const TransactionDetailsScreen = () => {
   const route = useRoute<TransactionDetailsScreenRouteProp>();
   const navigation = useNavigation();
@@ -52,7 +65,6 @@ const TransactionDetailsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get transaction from route params (may include immediate data)
   const transactionId = route.params?.transactionId;
   const initialTransaction = route.params?.transaction;
 
@@ -64,10 +76,16 @@ const TransactionDetailsScreen = () => {
         return;
       }
 
-      // If we have initial transaction data, show it immediately
       if (initialTransaction) {
-        setTransaction(initialTransaction as TransactionDetails);
+        setTransaction(initialTransaction as unknown as TransactionDetails);
         setLoading(false);
+        // Silently refresh in background for full details
+        try {
+          const response = await getTransactionDetails(transactionId);
+          setTransaction(response.data);
+        } catch {
+          // Keep showing initial data if refresh fails
+        }
         return;
       }
 
@@ -77,11 +95,15 @@ const TransactionDetailsScreen = () => {
       try {
         const response = await getTransactionDetails(transactionId);
         setTransaction(response.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as {
+          response?: {data?: {message?: string}};
+          message?: string;
+        };
         console.error('Failed to fetch transaction details:', err);
         const errorMessage =
-          err.response?.data?.message ||
-          err.message ||
+          e.response?.data?.message ||
+          e.message ||
           'Failed to load transaction details.';
         setError(errorMessage);
         Alert.alert('Error', errorMessage);
@@ -91,11 +113,11 @@ const TransactionDetailsScreen = () => {
     };
 
     fetchTransactionDetails();
-  }, [transactionId, initialTransaction]);
+  }, [transactionId]); // Removed initialTransaction from deps - we only want to fetch once
 
   if (loading) {
     return (
-      <View style={[commonStyles.container, styles.centerContent]}>
+      <View style={commonStyles.centerContent}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading Transaction Details...</Text>
       </View>
@@ -104,12 +126,14 @@ const TransactionDetailsScreen = () => {
 
   if (error || !transaction) {
     return (
-      <View style={[commonStyles.container, styles.centerContent]}>
-        <Text style={commonStyles.errorText}>
-          {error || 'Transaction not found'}
+      <View style={commonStyles.centerContent}>
+        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Text style={styles.errorTitle}>Transaction Not Found</Text>
+        <Text style={styles.errorMessage}>
+          {error || 'Transaction data unavailable'}
         </Text>
         <TouchableOpacity
-          style={[commonStyles.button, styles.retryButton]}
+          style={[commonStyles.button, styles.backBtn]}
           onPress={() => navigation.goBack()}>
           <Text style={commonStyles.buttonText}>Go Back</Text>
         </TouchableOpacity>
@@ -117,221 +141,229 @@ const TransactionDetailsScreen = () => {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return colors.success;
-      case 'PENDING':
-        return colors.warning;
-      case 'FAILED':
-      case 'CANCELLED':
-        return colors.error;
-      default:
-        return colors.textSecondary;
-    }
-  };
+  const isCredit = transaction.type === 'CREDIT';
+  const statusConfig = getStatusConfig(transaction.status);
+
+  const DetailBlock = ({
+    label,
+    value,
+    mono = false,
+  }: {
+    label: string;
+    value: string;
+    mono?: boolean;
+  }) => (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={[styles.detailValue, mono ? styles.monoText : null]}>
+        {value}
+      </Text>
+    </View>
+  );
 
   return (
-    <ScrollView style={commonStyles.container}>
-      <Text style={commonStyles.titleText}>Transaction Details</Text>
-
-      {/* Transaction Amount Card */}
-      <View style={[commonStyles.card, styles.amountCard]}>
-        <Text style={styles.amountLabel}>Amount</Text>
+    <ScrollView
+      style={commonStyles.container}
+      showsVerticalScrollIndicator={false}>
+      {/* Amount Hero Card */}
+      <View
+        style={[
+          styles.amountCard,
+          isCredit ? styles.creditCard : styles.debitCard,
+        ]}>
+        <View style={[styles.statusPill, {backgroundColor: statusConfig.bg}]}>
+          <Text style={[styles.statusPillText, {color: statusConfig.color}]}>
+            {statusConfig.icon} {transaction.status}
+          </Text>
+        </View>
+        <Text style={styles.amountLabel}>
+          {isCredit ? 'Money Received' : 'Money Sent'}
+        </Text>
         <Text
           style={[
             styles.amount,
-            transaction.type === 'CREDIT'
-              ? styles.creditAmount
-              : styles.debitAmount,
+            isCredit ? styles.creditAmount : styles.debitAmount,
           ]}>
-          {transaction.type === 'CREDIT' ? '+' : '-'}$
+          {isCredit ? '+' : '-'}$
           {transaction.amount.toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
         </Text>
-        <Text
-          style={[
-            styles.statusText,
-            {color: getStatusColor(transaction.status)},
-          ]}>
-          {transaction.status}
+        <Text style={styles.dateText}>
+          {new Date(transaction.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
         </Text>
       </View>
 
-      {/* Transaction Details Card */}
-      <View style={[commonStyles.card, styles.detailsCard]}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Description</Text>
-          <Text style={styles.detailValue}>{transaction.description}</Text>
-        </View>
+      {/* Transaction Details */}
+      <Text style={commonStyles.sectionTitle}>Details</Text>
+      <View style={commonStyles.card}>
+        <DetailBlock label="Description" value={transaction.description} />
+        {transaction.merchantName ? (
+          <DetailBlock label="Merchant" value={transaction.merchantName} />
+        ) : null}
+        {transaction.merchantAddress ? (
+          <DetailBlock label="Location" value={transaction.merchantAddress} />
+        ) : null}
+        {transaction.category ? (
+          <DetailBlock label="Category" value={transaction.category} />
+        ) : null}
+        <DetailBlock
+          label="Type"
+          value={isCredit ? 'Credit (Incoming)' : 'Debit (Outgoing)'}
+        />
+        <DetailBlock
+          label="Balance After"
+          value={`$${transaction.balance.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`}
+        />
+      </View>
 
-        {transaction.merchantName && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Merchant</Text>
-            <Text style={styles.detailValue}>{transaction.merchantName}</Text>
-          </View>
-        )}
+      {/* Reference Details */}
+      <Text style={commonStyles.sectionTitle}>Reference</Text>
+      <View style={commonStyles.card}>
+        <DetailBlock label="Transaction ID" value={transaction.id} mono />
+        {transaction.reference ? (
+          <DetailBlock label="Reference" value={transaction.reference} mono />
+        ) : null}
+        <DetailBlock
+          label="Date & Time"
+          value={new Date(transaction.date).toLocaleString()}
+        />
+      </View>
 
-        {transaction.merchantAddress && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text style={styles.detailValue}>
-              {transaction.merchantAddress}
-            </Text>
-          </View>
-        )}
-
-        {transaction.category && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Category</Text>
-            <Text style={styles.detailValue}>{transaction.category}</Text>
-          </View>
-        )}
-
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Transaction ID</Text>
-          <Text style={[styles.detailValue, styles.monoText]}>
-            {transaction.id}
-          </Text>
-        </View>
-
-        {transaction.reference && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Reference</Text>
-            <Text style={[styles.detailValue, styles.monoText]}>
-              {transaction.reference}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date & Time</Text>
-          <Text style={styles.detailValue}>
-            {new Date(transaction.date).toLocaleString()}
-          </Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Type</Text>
-          <Text style={styles.detailValue}>{transaction.type}</Text>
-        </View>
-
-        <View style={[styles.detailRow, styles.lastDetailRow]}>
-          <Text style={styles.detailLabel}>Balance After</Text>
-          <Text style={[styles.detailValue, styles.balanceValue]}>
-            $
-            {transaction.balance.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
-        </View>
-
-        {transaction.note && (
-          <View style={[styles.noteContainer, styles.lastDetailRow]}>
-            <Text style={styles.detailLabel}>Note</Text>
+      {transaction.note ? (
+        <>
+          <Text style={commonStyles.sectionTitle}>Note</Text>
+          <View style={[commonStyles.card, styles.noteCard]}>
             <Text style={styles.noteText}>{transaction.note}</Text>
           </View>
-        )}
-      </View>
+        </>
+      ) : null}
 
-      {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[commonStyles.button, styles.actionButton]}
-          onPress={() => navigation.goBack()}>
-          <Text style={commonStyles.buttonText}>Back to Transactions</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={[commonStyles.button, styles.backButton]}
+        onPress={() => navigation.goBack()}>
+        <Text style={commonStyles.buttonText}>← Back to Transactions</Text>
+      </TouchableOpacity>
+
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 12,
+    fontSize: 15,
     color: colors.textSecondary,
   },
-  retryButton: {
-    marginTop: 15,
-    backgroundColor: colors.secondary,
+  errorEmoji: {fontSize: 48, marginBottom: 16},
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
   },
+  errorMessage: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  backBtn: {minWidth: 160},
   amountCard: {
+    borderRadius: 20,
+    padding: 28,
+    marginBottom: 24,
     alignItems: 'center',
-    paddingVertical: 30,
+  },
+  creditCard: {
+    backgroundColor: colors.success,
+    shadowColor: colors.success,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  debitCard: {
+    backgroundColor: colors.error,
+    shadowColor: colors.error,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  statusPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  statusPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   amountLabel: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   amount: {
-    fontSize: 42,
-    fontWeight: 'bold',
+    fontSize: 44,
+    fontWeight: '700',
+    letterSpacing: -1,
     marginBottom: 8,
   },
-  creditAmount: {
-    color: colors.success,
-  },
-  debitAmount: {
-    color: colors.error,
-  },
-  statusText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  detailsCard: {
-    marginBottom: 20,
+  creditAmount: {color: colors.white},
+  debitAmount: {color: colors.white},
+  dateText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
   },
   detailRow: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  lastDetailRow: {
-    borderBottomWidth: 0,
+    borderBottomColor: colors.borderLight,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
-    marginBottom: 4,
     fontWeight: '500',
+    marginBottom: 4,
   },
   detailValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textPrimary,
+    fontWeight: '600',
   },
   monoText: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontSize: 13,
+    color: colors.textSecondary,
   },
-  balanceValue: {
-    fontWeight: 'bold',
-    color: colors.primary,
-    fontSize: 18,
-  },
-  noteContainer: {
-    paddingTop: 12,
-  },
+  noteCard: {backgroundColor: colors.primaryLight},
   noteText: {
     fontSize: 15,
     color: colors.textPrimary,
     lineHeight: 22,
   },
-  actionsContainer: {
-    marginBottom: 30,
+  backButton: {
+    marginBottom: 8,
+    borderRadius: 14,
   },
-  actionButton: {
-    marginBottom: 10,
-  },
+  bottomSpacer: {height: 32},
 });
 
 export default TransactionDetailsScreen;

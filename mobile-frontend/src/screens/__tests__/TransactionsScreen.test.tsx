@@ -1,4 +1,4 @@
-import 'react-native';
+import React from 'react';
 import {useNavigation} from '@react-navigation/native';
 import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import {useAuth} from '../../context/AuthContext';
@@ -18,7 +18,7 @@ describe('TransactionsScreen', () => {
 
   const mockTransactions = [
     {
-      id: '1',
+      id: 'txn-1',
       date: '2024-12-25T10:00:00Z',
       description: 'Coffee Shop',
       amount: 5.5,
@@ -27,7 +27,7 @@ describe('TransactionsScreen', () => {
       merchantName: 'Starbucks',
     },
     {
-      id: '2',
+      id: 'txn-2',
       date: '2024-12-24T15:30:00Z',
       description: 'Salary Deposit',
       amount: 5000,
@@ -38,21 +38,15 @@ describe('TransactionsScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useAuth as jest.Mock).mockReturnValue({
-      userData: {id: '123'},
-    });
-    (useNavigation as jest.Mock).mockReturnValue({
-      navigate: mockNavigate,
-    });
+    (useAuth as jest.Mock).mockReturnValue({userData: {id: '123'}});
+    (useNavigation as jest.Mock).mockReturnValue({navigate: mockNavigate});
   });
 
   it('renders loading state initially', () => {
     mockGetAccountTransactions.mockImplementation(() => new Promise(() => {}));
-
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
-
     expect(getByText('Loading Transactions...')).toBeTruthy();
   });
 
@@ -60,13 +54,10 @@ describe('TransactionsScreen', () => {
     mockGetAccountTransactions.mockResolvedValueOnce({
       data: mockTransactions,
     } as any);
-
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
-
     await waitFor(() => {
-      expect(getByText('Transactions')).toBeTruthy();
       expect(getByText('Coffee Shop')).toBeTruthy();
       expect(getByText('Starbucks')).toBeTruthy();
       expect(getByText('Salary Deposit')).toBeTruthy();
@@ -75,29 +66,35 @@ describe('TransactionsScreen', () => {
     });
   });
 
-  it('shows empty state when no transactions', async () => {
+  it('shows transaction count', async () => {
     mockGetAccountTransactions.mockResolvedValueOnce({
-      data: [],
+      data: mockTransactions,
     } as any);
-
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
-
     await waitFor(() => {
-      expect(getByText('No transactions found.')).toBeTruthy();
+      expect(getByText('2 transactions')).toBeTruthy();
     });
   });
 
-  it('handles error state', async () => {
-    mockGetAccountTransactions.mockRejectedValueOnce({
-      message: 'Network error',
-    });
-
+  it('shows empty state when no transactions', async () => {
+    mockGetAccountTransactions.mockResolvedValueOnce({data: []} as any);
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
+    await waitFor(() => {
+      expect(getByText('No Transactions')).toBeTruthy();
+    });
+  });
 
+  it('handles error state with retry', async () => {
+    mockGetAccountTransactions.mockRejectedValueOnce({
+      message: 'Network error',
+    });
+    const {getByText} = render(
+      <TransactionsScreen route={{params: {accountId: '123'}}} />,
+    );
     await waitFor(() => {
       expect(getByText('Network error')).toBeTruthy();
       expect(getByText('Retry')).toBeTruthy();
@@ -108,21 +105,14 @@ describe('TransactionsScreen', () => {
     mockGetAccountTransactions.mockResolvedValueOnce({
       data: mockTransactions,
     } as any);
-
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
-
-    await waitFor(() => {
-      expect(getByText('Coffee Shop')).toBeTruthy();
-    });
-
-    const transactionItem = getByText('Coffee Shop');
-    fireEvent.press(transactionItem.parent?.parent || transactionItem);
-
+    await waitFor(() => expect(getByText('Coffee Shop')).toBeTruthy());
+    fireEvent.press(getByText('Coffee Shop'));
     expect(mockNavigate).toHaveBeenCalledWith('TransactionDetails', {
-      transactionId: '1',
-      transaction: mockTransactions[0],
+      transactionId: 'txn-1',
+      transaction: expect.objectContaining({id: 'txn-1'}),
     });
   });
 
@@ -130,38 +120,33 @@ describe('TransactionsScreen', () => {
     mockGetAccountTransactions.mockResolvedValueOnce({
       data: mockTransactions,
     } as any);
-
     const {getByText} = render(
       <TransactionsScreen route={{params: {accountId: '123'}}} />,
     );
-
-    await waitFor(() => {
-      expect(getByText('Filter')).toBeTruthy();
-    });
-
-    const filterButton = getByText('Filter');
-    fireEvent.press(filterButton);
-
+    await waitFor(() => expect(getByText('⚡ Filter')).toBeTruthy());
+    fireEvent.press(getByText('⚡ Filter'));
     expect(mockNavigate).toHaveBeenCalledWith(
       'TransactionFilters',
       expect.any(Object),
     );
   });
 
-  it('refreshes transactions when pull to refresh', async () => {
-    mockGetAccountTransactions.mockResolvedValue({
-      data: mockTransactions,
-    } as any);
-
-    const {getByTestId} = render(
-      <TransactionsScreen route={{params: {accountId: '123'}}} />,
-    );
-
+  it('shows error when no account ID available', async () => {
+    (useAuth as jest.Mock).mockReturnValue({userData: null});
+    const {getByText} = render(<TransactionsScreen route={{params: {}}} />);
     await waitFor(() => {
-      expect(mockGetAccountTransactions).toHaveBeenCalledTimes(1);
+      expect(getByText('No account ID available')).toBeTruthy();
     });
+  });
 
-    // Simulate pull to refresh
-    // Note: This would require proper test ID on FlatList in the actual component
+  it('calls API with limit and offset params', async () => {
+    mockGetAccountTransactions.mockResolvedValueOnce({data: []} as any);
+    render(<TransactionsScreen route={{params: {accountId: '456'}}} />);
+    await waitFor(() => {
+      expect(mockGetAccountTransactions).toHaveBeenCalledWith(
+        '456',
+        expect.objectContaining({limit: 50, offset: 0}),
+      );
+    });
   });
 });

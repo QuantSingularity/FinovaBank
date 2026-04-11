@@ -1,15 +1,41 @@
-/**
- * @format
- */
-
-import 'react-native';
-
-// Note: import explicitly to use the types shiped with jest.
-import {it} from '@jest/globals';
-// Note: test renderer must be required after react-native.
-import renderer from 'react-test-renderer';
+import React from 'react';
+import {it, describe, expect, beforeEach, jest} from '@jest/globals';
+import {render} from '@testing-library/react-native';
 import App from '../App';
 
-it('renders correctly', () => {
-  renderer.create(<App />);
+jest.mock('../src/context/AuthContext', () => ({
+  AuthProvider: ({children}: {children: React.ReactNode}) => children,
+  useAuth: () => ({
+    userToken: null,
+    userData: null,
+    isLoading: false,
+    isAuthenticated: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    register: jest.fn(),
+  }),
+}));
+
+jest.mock('../src/navigation/AppNavigator', () => {
+  const {View, Text} = require('react-native');
+  return () => (
+    <View>
+      <Text>AppNavigator</Text>
+    </View>
+  );
+});
+
+describe('App', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders without crashing', () => {
+    const {getByText} = render(<App />);
+    expect(getByText('AppNavigator')).toBeTruthy();
+  });
+
+  it('wraps content in AuthProvider', () => {
+    expect(() => render(<App />)).not.toThrow();
+  });
 });

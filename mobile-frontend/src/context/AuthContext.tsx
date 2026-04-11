@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type React from 'react';
-import {
+import React, {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -16,7 +16,6 @@ import {
   registerUser,
 } from '../services/api';
 
-// Define the shape of the auth context data
 interface AuthContextData {
   userToken: string | null;
   userData: {
@@ -32,15 +31,12 @@ interface AuthContextData {
   register: (userData: RegisterData) => Promise<void>;
 }
 
-// Create the context with a default value
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-// Define the props for the AuthProvider
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Storage keys
 const TOKEN_STORAGE_KEY = 'finovabank_user_token';
 const USER_DATA_STORAGE_KEY = 'finovabank_user_data';
 
@@ -49,7 +45,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
   const [userData, setUserData] = useState<AuthResponse['user'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored token and user data on app start
   useEffect(() => {
     const bootstrapAsync = async () => {
       setIsLoading(true);
@@ -76,22 +71,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     bootstrapAsync();
   }, []);
 
-  const storeAuthData = async (response: AuthResponse) => {
+  const storeAuthData = useCallback(async (response: AuthResponse) => {
     try {
-      await AsyncStorage.setItem(TOKEN_STORAGE_KEY, response.token);
-      await AsyncStorage.setItem(
-        USER_DATA_STORAGE_KEY,
-        JSON.stringify(response.user),
-      );
+      await AsyncStorage.multiSet([
+        [TOKEN_STORAGE_KEY, response.token],
+        [USER_DATA_STORAGE_KEY, JSON.stringify(response.user)],
+      ]);
       setUserToken(response.token);
       setUserData(response.user);
     } catch (error) {
       console.error('Failed to store auth data', error);
       throw new Error('Failed to store authentication data');
     }
-  };
+  }, []);
 
-  const clearAuthData = async () => {
+  const clearAuthData = useCallback(async () => {
     try {
       await AsyncStorage.multiRemove([
         TOKEN_STORAGE_KEY,
@@ -103,15 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
       console.error('Failed to clear auth data', error);
       throw new Error('Failed to clear authentication data');
     }
-  };
+  }, []);
 
-  const authContextValue: AuthContextData = {
-    userToken,
-    userData,
-    isLoading,
-    isAuthenticated: !!userToken,
-
-    login: async (credentials: LoginCredentials) => {
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
       setIsLoading(true);
       try {
         const response = await loginUser(credentials);
@@ -123,27 +112,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         setIsLoading(false);
       }
     },
+    [storeAuthData],
+  );
 
-    logout: async () => {
-      setIsLoading(true);
-      try {
-        if (userToken) {
-          await logoutUser();
-        }
-        await clearAuthData();
-      } catch (error) {
-        console.error('Logout failed:', error);
-        // Still clear local auth data even if API call fails
-        await clearAuthData();
-      } finally {
-        setIsLoading(false);
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (userToken) {
+        await logoutUser();
       }
-    },
+      await clearAuthData();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      await clearAuthData();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userToken, clearAuthData]);
 
-    register: async (userData: RegisterData) => {
+  const register = useCallback(
+    async (newUserData: RegisterData) => {
       setIsLoading(true);
       try {
-        const response = await registerUser(userData);
+        const response = await registerUser(newUserData);
         await storeAuthData(response.data);
       } catch (error) {
         console.error('Registration failed:', error);
@@ -152,6 +143,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         setIsLoading(false);
       }
     },
+    [storeAuthData],
+  );
+
+  const authContextValue: AuthContextData = {
+    userToken,
+    userData,
+    isLoading,
+    isAuthenticated: !!userToken,
+    login,
+    logout,
+    register,
   };
 
   return (
@@ -161,10 +163,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
   );
 };
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (!context || Object.keys(context).length === 0) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

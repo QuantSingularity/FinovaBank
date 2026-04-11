@@ -1,10 +1,9 @@
-import 'react-native';
+import React from 'react';
 import {useNavigation} from '@react-navigation/native';
 import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import {useAuth} from '../../context/AuthContext';
 import LoginScreen from '../../screens/LoginScreen';
 
-// Mock the useAuth hook
 jest.mock('../../context/AuthContext');
 jest.mock('@react-navigation/native');
 
@@ -25,39 +24,48 @@ describe('LoginScreen', () => {
 
   it('renders correctly', () => {
     const {getByText, getByPlaceholderText} = render(<LoginScreen />);
-
-    expect(getByText('Welcome Back!')).toBeTruthy();
-    expect(getByText('Login to your FinovaBank account')).toBeTruthy();
-    expect(getByPlaceholderText('Email')).toBeTruthy();
-    expect(getByPlaceholderText('Password')).toBeTruthy();
-    expect(getByText('Login')).toBeTruthy();
+    expect(getByText('Welcome back')).toBeTruthy();
+    expect(getByText('Sign in to your account')).toBeTruthy();
+    expect(getByPlaceholderText('you@example.com')).toBeTruthy();
+    expect(getByPlaceholderText('Enter your password')).toBeTruthy();
+    expect(getByText('Sign In')).toBeTruthy();
   });
 
   it('shows error when fields are empty', async () => {
     const {getByText} = render(<LoginScreen />);
-    const loginButton = getByText('Login');
-
-    fireEvent.press(loginButton);
-
+    fireEvent.press(getByText('Sign In'));
     await waitFor(() => {
       expect(getByText('Please enter both email and password.')).toBeTruthy();
     });
-
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
-  it('calls login function with correct credentials', async () => {
-    mockLogin.mockResolvedValueOnce(undefined);
-
+  it('shows error for invalid email format', async () => {
     const {getByPlaceholderText, getByText} = render(<LoginScreen />);
-    const emailInput = getByPlaceholderText('Email');
-    const passwordInput = getByPlaceholderText('Password');
-    const loginButton = getByText('Login');
+    fireEvent.changeText(getByPlaceholderText('you@example.com'), 'notanemail');
+    fireEvent.changeText(
+      getByPlaceholderText('Enter your password'),
+      'password123',
+    );
+    fireEvent.press(getByText('Sign In'));
+    await waitFor(() => {
+      expect(getByText('Please enter a valid email address.')).toBeTruthy();
+    });
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
 
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, 'password123');
-    fireEvent.press(loginButton);
-
+  it('calls login function with trimmed, lowercased credentials', async () => {
+    mockLogin.mockResolvedValueOnce(undefined);
+    const {getByPlaceholderText, getByText} = render(<LoginScreen />);
+    fireEvent.changeText(
+      getByPlaceholderText('you@example.com'),
+      '  Test@Example.com  ',
+    );
+    fireEvent.changeText(
+      getByPlaceholderText('Enter your password'),
+      'password123',
+    );
+    fireEvent.press(getByText('Sign In'));
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
         email: 'test@example.com',
@@ -71,27 +79,41 @@ describe('LoginScreen', () => {
     mockLogin.mockRejectedValueOnce({
       response: {data: {error: {message: errorMessage}}},
     });
-
     const {getByPlaceholderText, getByText} = render(<LoginScreen />);
-    const emailInput = getByPlaceholderText('Email');
-    const passwordInput = getByPlaceholderText('Password');
-    const loginButton = getByText('Login');
-
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, 'wrongpassword');
-    fireEvent.press(loginButton);
-
+    fireEvent.changeText(
+      getByPlaceholderText('you@example.com'),
+      'test@example.com',
+    );
+    fireEvent.changeText(
+      getByPlaceholderText('Enter your password'),
+      'wrongpassword',
+    );
+    fireEvent.press(getByText('Sign In'));
     await waitFor(() => {
       expect(getByText(errorMessage)).toBeTruthy();
     });
   });
 
-  it('navigates to register screen when register button is pressed', () => {
+  it('shows api message error as fallback', async () => {
+    mockLogin.mockRejectedValueOnce({message: 'Network timeout'});
+    const {getByPlaceholderText, getByText} = render(<LoginScreen />);
+    fireEvent.changeText(
+      getByPlaceholderText('you@example.com'),
+      'test@example.com',
+    );
+    fireEvent.changeText(
+      getByPlaceholderText('Enter your password'),
+      'pass123',
+    );
+    fireEvent.press(getByText('Sign In'));
+    await waitFor(() => {
+      expect(getByText('Network timeout')).toBeTruthy();
+    });
+  });
+
+  it('navigates to register screen', () => {
     const {getByText} = render(<LoginScreen />);
-    const registerButton = getByText("Don't have an account? Register");
-
-    fireEvent.press(registerButton);
-
+    fireEvent.press(getByText('Create one'));
     expect(mockNavigate).toHaveBeenCalledWith('Register');
   });
 
@@ -100,14 +122,10 @@ describe('LoginScreen', () => {
       login: mockLogin,
       isLoading: true,
     });
-
-    const {getByPlaceholderText, getByText} = render(<LoginScreen />);
-    const emailInput = getByPlaceholderText('Email');
-    const passwordInput = getByPlaceholderText('Password');
-    const loginButton = getByText('Login').parent;
-
-    expect(emailInput.props.editable).toBe(false);
-    expect(passwordInput.props.editable).toBe(false);
-    expect(loginButton?.props.accessibilityState?.disabled).toBe(true);
+    const {getByPlaceholderText} = render(<LoginScreen />);
+    expect(getByPlaceholderText('you@example.com').props.editable).toBe(false);
+    expect(getByPlaceholderText('Enter your password').props.editable).toBe(
+      false,
+    );
   });
 });

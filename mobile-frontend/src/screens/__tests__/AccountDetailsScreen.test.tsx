@@ -1,4 +1,4 @@
-import 'react-native';
+import React from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import {Alert} from 'react-native';
@@ -41,33 +41,25 @@ describe('AccountDetailsScreen', () => {
     });
     (useNavigation as jest.Mock).mockReturnValue({
       navigate: mockNavigate,
+      goBack: jest.fn(),
     });
   });
 
   it('renders loading state initially', () => {
-    mockGetAccountDetails.mockImplementation(
-      () => new Promise(() => {}), // Never resolves
-    );
-
+    mockGetAccountDetails.mockImplementation(() => new Promise(() => {}));
     const {getByText} = render(<AccountDetailsScreen />);
-
     expect(getByText('Loading Account Details...')).toBeTruthy();
   });
 
   it('renders account details after successful fetch', async () => {
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: mockAccountData,
-    } as any);
-
+    mockGetAccountDetails.mockResolvedValueOnce({data: mockAccountData} as any);
     const {getByText} = render(<AccountDetailsScreen />);
-
     await waitFor(() => {
-      expect(getByText('Account Details')).toBeTruthy();
       expect(getByText('****1234')).toBeTruthy();
       expect(getByText('123456789')).toBeTruthy();
       expect(getByText('Checking')).toBeTruthy();
-      expect(getByText('ACTIVE')).toBeTruthy();
-      expect(getByText('0.50%')).toBeTruthy();
+      expect(getByText('Active')).toBeTruthy();
+      expect(getByText('0.50% APY')).toBeTruthy();
       expect(getByText('$5,420.50')).toBeTruthy();
       expect(getByText('John Doe')).toBeTruthy();
       expect(getByText('john@example.com')).toBeTruthy();
@@ -76,107 +68,85 @@ describe('AccountDetailsScreen', () => {
 
   it('renders error state when fetch fails', async () => {
     const errorMessage = 'Failed to load account details.';
-    mockGetAccountDetails.mockRejectedValueOnce({
-      message: errorMessage,
-    });
-
+    mockGetAccountDetails.mockRejectedValueOnce({message: errorMessage});
     const {getByText} = render(<AccountDetailsScreen />);
-
     await waitFor(() => {
-      expect(getByText(`Error: ${errorMessage}`)).toBeTruthy();
-      expect(getByText('Return to Dashboard')).toBeTruthy();
+      expect(getByText('Something went wrong')).toBeTruthy();
+      expect(getByText(errorMessage)).toBeTruthy();
     });
-
-    expect(Alert.alert).toHaveBeenCalledWith('Error', errorMessage);
   });
 
-  it('navigates to Transactions screen when Transactions button is pressed', async () => {
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: mockAccountData,
-    } as any);
-
+  it('shows retry button that refetches', async () => {
+    mockGetAccountDetails.mockRejectedValueOnce({message: 'Error'});
+    mockGetAccountDetails.mockResolvedValueOnce({data: mockAccountData} as any);
     const {getByText} = render(<AccountDetailsScreen />);
-
+    await waitFor(() => expect(getByText('Try Again')).toBeTruthy());
+    fireEvent.press(getByText('Try Again'));
     await waitFor(() => {
-      expect(getByText('Transactions')).toBeTruthy();
+      expect(mockGetAccountDetails).toHaveBeenCalledTimes(2);
     });
+  });
 
-    const transactionsButton = getByText('Transactions');
-    fireEvent.press(transactionsButton);
-
+  it('navigates to Transactions screen', async () => {
+    mockGetAccountDetails.mockResolvedValueOnce({data: mockAccountData} as any);
+    const {getByText} = render(<AccountDetailsScreen />);
+    await waitFor(() => expect(getByText('Transactions')).toBeTruthy());
+    fireEvent.press(getByText('Transactions'));
     expect(mockNavigate).toHaveBeenCalledWith('Transactions', {
       accountId: '123',
     });
   });
 
-  it('navigates to SavingsGoals screen when Savings Goals button is pressed', async () => {
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: mockAccountData,
-    } as any);
-
+  it('navigates to SavingsGoals screen', async () => {
+    mockGetAccountDetails.mockResolvedValueOnce({data: mockAccountData} as any);
     const {getByText} = render(<AccountDetailsScreen />);
-
-    await waitFor(() => {
-      expect(getByText('Savings Goals')).toBeTruthy();
-    });
-
-    const savingsButton = getByText('Savings Goals');
-    fireEvent.press(savingsButton);
-
+    await waitFor(() => expect(getByText('Savings Goals')).toBeTruthy());
+    fireEvent.press(getByText('Savings Goals'));
     expect(mockNavigate).toHaveBeenCalledWith('SavingsGoals', {
       accountId: '123',
     });
   });
 
-  it('navigates to Loans screen when Loans button is pressed', async () => {
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: mockAccountData,
-    } as any);
-
+  it('navigates to Loans screen', async () => {
+    mockGetAccountDetails.mockResolvedValueOnce({data: mockAccountData} as any);
     const {getByText} = render(<AccountDetailsScreen />);
-
-    await waitFor(() => {
-      expect(getByText('Loans')).toBeTruthy();
-    });
-
-    const loansButton = getByText('Loans');
-    fireEvent.press(loansButton);
-
+    await waitFor(() => expect(getByText('Loans')).toBeTruthy());
+    fireEvent.press(getByText('Loans'));
     expect(mockNavigate).toHaveBeenCalledWith('Loans', {accountId: '123'});
   });
 
-  it('displays correct status color for different statuses', async () => {
-    const inactiveAccountData = {
-      ...mockAccountData,
-      status: 'INACTIVE' as const,
-    };
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: inactiveAccountData,
-    } as any);
-
-    const {getByText} = render(<AccountDetailsScreen />);
-
-    await waitFor(() => {
-      expect(getByText('INACTIVE')).toBeTruthy();
-    });
-  });
-
   it('handles missing optional fields gracefully', async () => {
-    const minimalAccountData = {
+    const minimalData = {
       ...mockAccountData,
       routingNumber: undefined,
       interestRate: undefined,
     };
-    mockGetAccountDetails.mockResolvedValueOnce({
-      data: minimalAccountData,
-    } as any);
-
+    mockGetAccountDetails.mockResolvedValueOnce({data: minimalData} as any);
     const {getByText, queryByText} = render(<AccountDetailsScreen />);
-
     await waitFor(() => {
-      expect(getByText('Account Details')).toBeTruthy();
-      expect(queryByText('Routing Number:')).toBeNull();
-      expect(queryByText('Interest Rate:')).toBeNull();
+      expect(getByText('****1234')).toBeTruthy();
+      expect(queryByText('Routing Number')).toBeNull();
+      expect(queryByText('Interest Rate')).toBeNull();
+    });
+  });
+
+  it('shows correct status styling for INACTIVE status', async () => {
+    mockGetAccountDetails.mockResolvedValueOnce({
+      data: {...mockAccountData, status: 'INACTIVE' as const},
+    } as any);
+    const {getByText} = render(<AccountDetailsScreen />);
+    await waitFor(() => {
+      expect(getByText('Inactive')).toBeTruthy();
+    });
+  });
+
+  it('shows correct status styling for FROZEN status', async () => {
+    mockGetAccountDetails.mockResolvedValueOnce({
+      data: {...mockAccountData, status: 'FROZEN' as const},
+    } as any);
+    const {getByText} = render(<AccountDetailsScreen />);
+    await waitFor(() => {
+      expect(getByText('Frozen')).toBeTruthy();
     });
   });
 });
