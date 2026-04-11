@@ -15,9 +15,9 @@
     {
       "type": "timeseries",
       "title": "CPU Usage",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "id": 1,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{image!=\"\"}[1m])) by (instance)",
@@ -30,9 +30,9 @@
           "unit": "percentunit",
           "thresholds": {
             "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 0.7},
-              {"color": "red", "value": 0.9}
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
             ]
           }
         }
@@ -41,9 +41,9 @@
     {
       "type": "timeseries",
       "title": "Memory Usage",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "id": 2,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{image!=\"\"}) by (instance)",
@@ -60,9 +60,9 @@
     {
       "type": "timeseries",
       "title": "HTTP Requests Rate",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "id": 3,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total[5m])) by (service)",
@@ -79,9 +79,9 @@
     {
       "type": "timeseries",
       "title": "HTTP Error Rate (5xx)",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "id": 4,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service)",
@@ -94,8 +94,8 @@
           "unit": "reqps",
           "thresholds": {
             "steps": [
-              {"color": "green", "value": null},
-              {"color": "red", "value": 0.01}
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
             ]
           }
         }
@@ -104,9 +104,9 @@
     {
       "type": "timeseries",
       "title": "JVM Heap Usage",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "id": 5,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "jvm_memory_used_bytes{area=\"heap\"}",
@@ -123,9 +123,9 @@
     {
       "type": "stat",
       "title": "Active Services",
-      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 16 },
       "id": 6,
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "count(up{job=\"finova-services\"} == 1)",
