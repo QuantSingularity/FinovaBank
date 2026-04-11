@@ -21,20 +21,18 @@ const mockLoans = [
 jest.mock("../../services/api", () => ({
   loanAPI: {
     getLoans: jest.fn().mockResolvedValue({ data: mockLoans }),
-    applyForLoan: jest
-      .fn()
-      .mockResolvedValue({
-        data: {
-          loanId: "LOAN-002",
-          loanAmount: 5000,
-          loanType: "EDUCATION",
-          interestRate: 4.5,
-          durationInMonths: 12,
-          monthlyPayment: 430,
-          remainingAmount: 5000,
-          status: "PENDING",
-        },
-      }),
+    applyForLoan: jest.fn().mockResolvedValue({
+      data: {
+        loanId: "LOAN-002",
+        loanAmount: 5000,
+        loanType: "EDUCATION",
+        interestRate: 4.5,
+        durationInMonths: 12,
+        monthlyPayment: 430,
+        remainingAmount: 5000,
+        status: "PENDING",
+      },
+    }),
   },
 }));
 

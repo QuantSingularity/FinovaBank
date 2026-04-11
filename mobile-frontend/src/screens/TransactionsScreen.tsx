@@ -207,7 +207,9 @@ const TransactionsScreen = ({route}: Props) => {
       <View style={styles.filterBar}>
         <Text style={styles.countText}>
           {transactions.length > 0
-            ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`
+            ? `${transactions.length} transaction${
+                transactions.length !== 1 ? 's' : ''
+              }`
             : 'Transactions'}
         </Text>
         <View style={styles.filterBarRight}>

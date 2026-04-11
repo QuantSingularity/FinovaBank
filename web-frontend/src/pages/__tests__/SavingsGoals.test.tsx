@@ -27,19 +27,17 @@ const mockSavingsGoals = [
 jest.mock("../../services/api", () => ({
   savingsAPI: {
     getSavingsGoals: jest.fn().mockResolvedValue({ data: mockSavingsGoals }),
-    createSavingsGoal: jest
-      .fn()
-      .mockResolvedValue({
-        data: {
-          goalId: "GOAL-003",
-          goalName: "New Goal",
-          targetAmount: 1000,
-          currentAmount: 0,
-          targetDate: "2026-01-01",
-          createdAt: "",
-          status: "ACTIVE",
-        },
-      }),
+    createSavingsGoal: jest.fn().mockResolvedValue({
+      data: {
+        goalId: "GOAL-003",
+        goalName: "New Goal",
+        targetAmount: 1000,
+        currentAmount: 0,
+        targetDate: "2026-01-01",
+        createdAt: "",
+        status: "ACTIVE",
+      },
+    }),
     updateSavingsGoal: jest.fn().mockResolvedValue({ data: null }),
     deleteSavingsGoal: jest.fn().mockResolvedValue({}),
   },

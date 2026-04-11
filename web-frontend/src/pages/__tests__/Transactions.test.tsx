@@ -31,20 +31,18 @@ const mockTransactions = [
 jest.mock("../../services/api", () => ({
   transactionAPI: {
     getTransactions: jest.fn().mockResolvedValue({ data: mockTransactions }),
-    createTransaction: jest
-      .fn()
-      .mockResolvedValue({
-        data: {
-          transactionId: "T003",
-          transactionType: "DEPOSIT",
-          amount: 200,
-          description: "Test",
-          date: "2025-04-03",
-          status: "COMPLETED",
-          accountId: "ACC001",
-          currency: "USD",
-        },
-      }),
+    createTransaction: jest.fn().mockResolvedValue({
+      data: {
+        transactionId: "T003",
+        transactionType: "DEPOSIT",
+        amount: 200,
+        description: "Test",
+        date: "2025-04-03",
+        status: "COMPLETED",
+        accountId: "ACC001",
+        currency: "USD",
+      },
+    }),
   },
 }));
 

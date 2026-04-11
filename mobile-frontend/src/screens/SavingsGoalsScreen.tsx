@@ -491,7 +491,9 @@ const SavingsGoalsScreen = ({route}: Props) => {
       <View style={commonStyles.spaceBetween}>
         <Text style={styles.screenTitle}>
           {savingsGoals.length > 0
-            ? `${savingsGoals.length} Goal${savingsGoals.length !== 1 ? 's' : ''}`
+            ? `${savingsGoals.length} Goal${
+                savingsGoals.length !== 1 ? 's' : ''
+              }`
             : 'Savings Goals'}
         </Text>
         <TouchableOpacity
