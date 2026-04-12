@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BACKEND_DIR: backend
+      BACKEND_DIR: code/backend
       WEB_FRONTEND_DIR: web-frontend
       MOBILE_FRONTEND_DIR: mobile-frontend
       INFRASTRUCTURE_DIR: infrastructure
