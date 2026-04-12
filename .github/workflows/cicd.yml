@@ -30,7 +30,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          distribution: temurin
+          distribution: "temurin"
           java-version: "17"
 
       - name: Install Google Java Format
@@ -41,8 +41,9 @@ jobs:
         working-directory: ${{ env.BACKEND_DIR }}
         run: |
           echo "=== Running Google Java Format ==="
-          find . -name "*.java" | while read file; do
-            java -jar ../google-java-format-1.17.0-all-deps.jar --dry-run "$file" || exit 1
+          # Use $GITHUB_WORKSPACE to reference the JAR downloaded in the root
+          find . -name "*.java" | while read -r file; do
+            java -jar "$GITHUB_WORKSPACE/google-java-format-1.17.0-all-deps.jar" --dry-run "$file" || exit 1
           done
 
       # -------------------------------
