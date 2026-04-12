@@ -1,4 +1,4 @@
-<!-- AI Service POM (Python service - minimal POM for build compatibility) -->
+<!-- AI Service POM (Python service - standalone, not part of Maven reactor) -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
@@ -6,16 +6,11 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.finova</groupId>
-        <artifactId>finovabank-solution</artifactId>
-        <version>1.0.0</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
-
+    <groupId>com.finova</groupId>
     <artifactId>ai-service</artifactId>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>AI Service (Python)</name>
-    <description>Python-based AI service - not built with Maven</description>
+    <description>Python-based AI service - built independently via ml-services/</description>
 
 </project>
