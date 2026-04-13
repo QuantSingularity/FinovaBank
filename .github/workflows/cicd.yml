@@ -115,3 +115,65 @@ jobs:
       # -------------------------------
       - name: Finalize Check
         run: echo "All formatting checks completed successfully."
+
+  # ============================================================
+  # Backend Tests — Spring Boot multi-module Maven project
+  # Services: eureka-server, api-gateway, auth-service,
+  #   security-service, notification-service, loan-management,
+  #   account-management, transaction-service, reporting,
+  #   savings-goals
+  # Tests use H2 in-memory DB; no external services required.
+  # ============================================================
+  backend_tests:
+    name: Backend Tests (Java / Maven)
+    runs-on: ubuntu-latest
+
+    env:
+      BACKEND_DIR: code/backend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      # Cache Maven local repository to speed up subsequent runs
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('code/backend/**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # Run the full test suite via the parent POM.
+      # The active profile "test" picks up application-test.yml in every module,
+      # which wires H2, disables Redis/Kafka auto-configuration, and disables Eureka.
+      - name: Run all backend tests
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          echo "=== Running FinvaBank backend tests ==="
+          mvn --batch-mode --no-transfer-progress \
+            -P test \
+            test \
+            -Dspring.profiles.active=test
+
+      # Aggregate Surefire XML reports from every module into one place
+      - name: Collect Surefire reports
+        if: always()
+        run: |
+          mkdir -p test-results/backend
+          find code/backend -path "*/surefire-reports/*.xml" \
+            -exec cp {} test-results/backend/ \;
+
+      - name: Publish backend test results
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: "test-results/backend/*.xml"
+          check_name: "Backend Test Results"
+          fail_on_failure: true
