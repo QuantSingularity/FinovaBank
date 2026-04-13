@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.finova.loan.LoanManagementApplication;
+import com.finova.loan.config.SecurityConfig;
 import com.finova.loan.model.Loan;
 import com.finova.loan.service.LoanService;
 import java.math.BigDecimal;
@@ -19,12 +20,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(LoanController.class)
 @ContextConfiguration(classes = LoanManagementApplication.class)
+@Import(SecurityConfig.class)
 public class LoanControllerTest {
 
   @Autowired private MockMvc mockMvc;

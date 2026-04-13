@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.finova.account.AccountManagementApplication;
+import com.finova.account.config.SecurityConfig;
 import com.finova.account.dto.AccountCreateRequest;
 import com.finova.account.dto.AccountResponse;
 import com.finova.account.dto.AccountUpdateRequest;
@@ -26,12 +27,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AccountController.class)
 @ContextConfiguration(classes = AccountManagementApplication.class)
+@Import(SecurityConfig.class)
 public class AccountControllerTest {
 
   @Autowired private MockMvc mockMvc;

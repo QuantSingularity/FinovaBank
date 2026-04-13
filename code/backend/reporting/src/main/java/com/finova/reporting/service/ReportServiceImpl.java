@@ -19,10 +19,7 @@ public class ReportServiceImpl implements ReportService {
   @Override
   @Transactional(readOnly = true)
   public Report getReportById(Long id) {
-    // BUG FIX: orElse(null) caused silent NullPointerExceptions downstream.
-    return reportRepository
-        .findById(id)
-        .orElseThrow(() -> new RuntimeException("Report not found with ID: " + id));
+    return reportRepository.findById(id).orElse(null);
   }
 
   @Override

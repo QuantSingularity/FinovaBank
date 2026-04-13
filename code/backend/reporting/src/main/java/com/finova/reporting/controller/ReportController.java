@@ -25,9 +25,11 @@ public class ReportController {
   @Operation(summary = "Get report by ID")
   public ResponseEntity<Report> getReportById(@PathVariable Long id) {
     log.debug("Fetching report with ID: {}", id);
-    // BUG FIX: Service now throws RuntimeException on missing entity (handled by
-    // GlobalExceptionHandler), so the old null-check dead-code is removed.
-    return ResponseEntity.ok(reportService.getReportById(id));
+    Report report = reportService.getReportById(id);
+    if (report == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(report);
   }
 
   @GetMapping

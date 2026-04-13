@@ -22,8 +22,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(
     name = "savings_goal",
     indexes = {
-      @Index(name = "idx_sg_customer_id", columnList = "customerId"),
-      @Index(name = "idx_sg_account_id", columnList = "accountId"),
+      @Index(name = "idx_sg_customer_id", columnList = "customer_id"),
+      @Index(name = "idx_sg_account_id", columnList = "account_id"),
       @Index(name = "idx_sg_status", columnList = "status")
     })
 public class SavingsGoal {

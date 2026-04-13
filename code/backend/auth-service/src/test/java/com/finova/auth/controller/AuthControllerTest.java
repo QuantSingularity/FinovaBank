@@ -14,6 +14,7 @@ import com.finova.auth.dto.UserResponse;
 import com.finova.auth.repository.RoleRepository;
 import com.finova.auth.repository.UserRepository;
 import com.finova.auth.security.CustomUserDetailsService;
+import com.finova.auth.security.SecurityConfig;
 import com.finova.auth.service.AuthService;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -21,12 +22,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
 @ContextConfiguration(classes = com.finova.auth.AuthServiceApplication.class)
+@Import(SecurityConfig.class)
 public class AuthControllerTest {
 
   @Autowired private MockMvc mockMvc;

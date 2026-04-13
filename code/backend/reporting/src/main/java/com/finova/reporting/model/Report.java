@@ -17,9 +17,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(
     name = "report",
     indexes = {
-      @Index(name = "idx_report_account_id", columnList = "accountId"),
-      @Index(name = "idx_report_type", columnList = "reportType"),
-      @Index(name = "idx_report_generated_at", columnList = "generatedAt")
+      @Index(name = "idx_report_account_id", columnList = "account_id"),
+      @Index(name = "idx_report_type", columnList = "report_type"),
+      @Index(name = "idx_report_generated_at", columnList = "generated_at")
     })
 public class Report {
 

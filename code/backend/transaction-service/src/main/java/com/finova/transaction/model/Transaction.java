@@ -20,9 +20,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(
     name = "transaction",
     indexes = {
-      @Index(name = "idx_tx_account_id", columnList = "accountId"),
+      @Index(name = "idx_tx_account_id", columnList = "account_id"),
       @Index(name = "idx_tx_timestamp", columnList = "timestamp"),
-      @Index(name = "idx_tx_reference", columnList = "referenceNumber", unique = true)
+      @Index(name = "idx_tx_reference", columnList = "reference_number", unique = true)
     })
 public class Transaction {
 
