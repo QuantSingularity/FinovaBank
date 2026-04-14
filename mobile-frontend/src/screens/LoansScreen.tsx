@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,652 +30,553 @@ interface Loan {
   appliedDate: string;
   approvalDate?: string;
 }
-
 interface LoanType {
   id: string;
   name: string;
   maxAmount: number;
   baseRate: number;
 }
-
-type LoansScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Loans'
->;
-
+type LoansNav = NativeStackNavigationProp<RootStackParamList, 'Loans'>;
 interface Props {
   route: {params?: {accountId?: string}};
 }
 
-const getStatusConfig = (status: Loan['status']) => {
-  switch (status) {
+const statusConfig = (s: Loan['status']) => {
+  switch (s) {
     case 'APPROVED':
     case 'ACTIVE':
-      return {color: colors.success, bg: colors.successLight};
+      return {
+        color: colors.success,
+        bg: colors.successLight,
+        label: s === 'ACTIVE' ? 'Active' : 'Approved',
+      };
     case 'PENDING':
-      return {color: colors.warning, bg: colors.warningLight};
+      return {color: colors.warning, bg: colors.warningLight, label: 'Pending'};
     case 'REJECTED':
-      return {color: colors.error, bg: colors.errorLight};
+      return {color: colors.error, bg: colors.errorLight, label: 'Rejected'};
     case 'PAID':
-      return {color: colors.textSecondary, bg: colors.surface};
+      return {color: colors.textSecondary, bg: colors.surface, label: 'Paid'};
     default:
-      return {color: colors.textSecondary, bg: colors.surface};
+      return {color: colors.textSecondary, bg: colors.surface, label: s};
   }
 };
 
-interface LoanApplicationFormProps {
-  loanTypes: LoanType[];
-  onClose: () => void;
-  onSubmit: (loanData: {
-    loanType: string;
-    amount: number;
-    term: number;
-    purpose: string;
-  }) => Promise<void>;
-}
-
-const LoanApplicationForm = ({
-  loanTypes,
-  onClose,
-  onSubmit,
-}: LoanApplicationFormProps) => {
-  const [selectedTypeId, setSelectedTypeId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [term, setTerm] = useState('');
-  const [purpose, setPurpose] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  const selectedType = loanTypes.find(t => t.id === selectedTypeId);
-
-  const handleSubmit = async () => {
-    setFormError('');
-    if (!selectedTypeId) {
-      setFormError('Please select a loan type.');
-      return;
-    }
-    const parsedAmount = parseFloat(amount);
-    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
-      setFormError('Please enter a valid loan amount.');
-      return;
-    }
-    if (selectedType && parsedAmount > selectedType.maxAmount) {
-      setFormError(
-        `Maximum amount for this loan type is $${selectedType.maxAmount.toLocaleString()}.`,
-      );
-      return;
-    }
-    const parsedTerm = parseInt(term, 10);
-    if (!term || isNaN(parsedTerm) || parsedTerm <= 0 || parsedTerm > 360) {
-      setFormError('Please enter a valid term (1-360 months).');
-      return;
-    }
-    if (!purpose.trim()) {
-      setFormError('Please describe the purpose of this loan.');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      await onSubmit({
-        loanType: selectedTypeId,
-        amount: parsedAmount,
-        term: parsedTerm,
-        purpose: purpose.trim(),
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled">
-      <View style={styles.formHeader}>
-        <Text style={styles.formTitle}>Apply for a Loan</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-          <Text style={styles.closeBtnText}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {formError ? (
-        <View style={commonStyles.errorContainer}>
-          <Text style={commonStyles.errorText}>{formError}</Text>
-        </View>
-      ) : null}
-
-      <Text style={styles.formLabel}>Loan Type</Text>
-      <View style={styles.loanTypesGrid}>
-        {loanTypes.map(type => (
-          <TouchableOpacity
-            key={type.id}
-            style={[
-              styles.loanTypeChip,
-              selectedTypeId === type.id && styles.loanTypeChipSelected,
-            ]}
-            onPress={() => setSelectedTypeId(type.id)}
-            activeOpacity={0.75}>
-            <Text
-              style={[
-                styles.loanTypeChipText,
-                selectedTypeId === type.id && styles.loanTypeChipTextSelected,
-              ]}>
-              {type.name}
-            </Text>
-            <Text
-              style={[
-                styles.loanTypeRate,
-                selectedTypeId === type.id && styles.loanTypeRateSelected,
-              ]}>
-              {type.baseRate}% APR
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {selectedType ? (
-        <View style={styles.loanTypeInfo}>
-          <Text style={styles.loanTypeInfoText}>
-            Max amount: ${selectedType.maxAmount.toLocaleString()} · Base rate:{' '}
-            {selectedType.baseRate}%
-          </Text>
-        </View>
-      ) : null}
-
-      <Text style={styles.formLabel}>Loan Amount ($)</Text>
-      <TextInput
-        style={commonStyles.input}
-        value={amount}
-        onChangeText={setAmount}
-        placeholder="e.g. 10000"
-        placeholderTextColor={colors.textTertiary}
-        keyboardType="decimal-pad"
-      />
-
-      <Text style={styles.formLabel}>Loan Term (months)</Text>
-      <TextInput
-        style={commonStyles.input}
-        value={term}
-        onChangeText={setTerm}
-        placeholder="e.g. 36"
-        placeholderTextColor={colors.textTertiary}
-        keyboardType="number-pad"
-      />
-
-      <Text style={styles.formLabel}>Purpose</Text>
-      <TextInput
-        style={[commonStyles.input, styles.purposeInput]}
-        value={purpose}
-        onChangeText={setPurpose}
-        placeholder="Describe why you need this loan..."
-        placeholderTextColor={colors.textTertiary}
-        multiline
-        numberOfLines={3}
-        textAlignVertical="top"
-      />
-
-      <View style={styles.formButtons}>
-        <TouchableOpacity
-          style={[
-            commonStyles.button,
-            commonStyles.buttonOutline,
-            styles.cancelFormBtn,
-          ]}
-          onPress={onClose}
-          disabled={submitting}>
-          <Text style={commonStyles.buttonTextOutline}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            commonStyles.button,
-            styles.submitBtn,
-            submitting && styles.disabledBtn,
-          ]}
-          onPress={handleSubmit}
-          disabled={submitting}>
-          {submitting ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Text style={commonStyles.buttonText}>Submit</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
-};
+type Screen = 'list' | 'apply';
 
 const LoansScreen = ({route}: Props) => {
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [loanTypes, setLoanTypes] = useState<LoanType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showLoanForm, setShowLoanForm] = useState(false);
-  const [loanTypes, setLoanTypes] = useState<LoanType[]>([]);
-
-  const navigation = useNavigation<LoansScreenNavigationProp>();
+  const [screen, setScreen] = useState<Screen>('list');
+  const [selectedType, setSelectedType] = useState('');
+  const [amount, setAmount] = useState('');
+  const [term, setTerm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const {userData} = useAuth();
+  const accountId = route?.params?.accountId || userData?.id || '';
 
-  const accountId = route?.params?.accountId || (userData?.id ?? '');
-
-  const fetchLoans = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!accountId) {
       setLoading(false);
-      setError('No account ID available');
+      setError('No account ID.');
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
-      const [loansResponse, typesResponse] = await Promise.all([
+      const [loansRes, typesRes] = await Promise.all([
         getAccountLoans(accountId),
         getLoanTypes(),
       ]);
-      setLoans(Array.isArray(loansResponse.data) ? loansResponse.data : []);
-      setLoanTypes(Array.isArray(typesResponse.data) ? typesResponse.data : []);
-    } catch (err: unknown) {
-      const e = err as {
-        response?: {data?: {message?: string}};
-        message?: string;
-      };
-      console.error('Failed to fetch loans:', err);
-      const errorMessage =
-        e.response?.data?.message || e.message || 'Failed to load loans.';
-      setError(errorMessage);
-      Alert.alert('Error', errorMessage);
+      setLoans(Array.isArray(loansRes.data) ? loansRes.data : []);
+      setLoanTypes(Array.isArray(typesRes.data) ? typesRes.data : []);
+    } catch (e: any) {
+      setError(
+        e.response?.data?.message || e.message || 'Failed to load loans.',
+      );
     } finally {
       setLoading(false);
     }
   }, [accountId]);
 
   useEffect(() => {
-    fetchLoans();
-  }, [fetchLoans]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleLoanSubmit = async (loanData: {
-    loanType: string;
-    amount: number;
-    term: number;
-    purpose: string;
-  }) => {
+  const handleApply = async () => {
+    setFormError('');
+    if (!selectedType) {
+      setFormError('Please select a loan type.');
+      return;
+    }
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      setFormError('Please enter a valid amount.');
+      return;
+    }
+    if (!term || isNaN(Number(term)) || Number(term) <= 0) {
+      setFormError('Please enter a valid term.');
+      return;
+    }
+    setSubmitting(true);
     try {
-      await applyForLoan({...loanData, accountId});
-      await fetchLoans();
-      setShowLoanForm(false);
+      await applyForLoan({
+        accountId,
+        loanTypeId: selectedType,
+        amount: Number(amount),
+        term: Number(term),
+      });
       Alert.alert(
         'Application Submitted',
-        'Your loan application has been submitted successfully. You will be notified once it is reviewed.',
+        'Your loan application has been submitted for review.',
       );
-    } catch (err: unknown) {
-      const e = err as {
-        response?: {data?: {message?: string}};
-        message?: string;
-      };
-      const errorMessage =
+      setScreen('list');
+      setAmount('');
+      setTerm('');
+      setSelectedType('');
+      fetchData();
+    } catch (e: any) {
+      setFormError(
         e.response?.data?.message ||
-        e.message ||
-        'Failed to submit loan application.';
-      Alert.alert('Error', errorMessage);
-      throw err;
+          e.message ||
+          'Failed to submit application.',
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const renderLoanItem = ({item}: {item: Loan}) => {
-    const statusConfig = getStatusConfig(item.status);
-    const progressPct =
-      item.status === 'ACTIVE'
-        ? Math.round(
-            ((item.amount - item.remainingBalance) / item.amount) * 100,
-          )
-        : 0;
+  const totalBalance = loans
+    .filter(l => ['ACTIVE', 'APPROVED'].includes(l.status))
+    .reduce((s, l) => s + l.remainingBalance, 0);
 
-    return (
-      <View style={styles.loanCard}>
-        <View style={commonStyles.spaceBetween}>
-          <View style={styles.loanLeft}>
-            <Text style={styles.loanType}>{item.type}</Text>
-            <Text style={styles.loanDate}>
-              Applied{' '}
-              {new Date(item.appliedDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.loanStatusBadge,
-              {backgroundColor: statusConfig.bg},
-            ]}>
-            <Text style={[styles.loanStatusText, {color: statusConfig.color}]}>
-              {item.status}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.loanAmountRow}>
-          <View style={styles.loanAmountBlock}>
-            <Text style={styles.loanAmountLabel}>Amount</Text>
-            <Text style={styles.loanAmountValue}>
-              $
-              {item.amount.toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-              })}
-            </Text>
-          </View>
-          <View style={styles.loanAmountBlock}>
-            <Text style={styles.loanAmountLabel}>Rate</Text>
-            <Text style={styles.loanAmountValue}>{item.interestRate}% APR</Text>
-          </View>
-          <View style={styles.loanAmountBlock}>
-            <Text style={styles.loanAmountLabel}>Term</Text>
-            <Text style={styles.loanAmountValue}>{item.term} mo.</Text>
-          </View>
-        </View>
-
-        {item.status === 'ACTIVE' && (
-          <>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Repayment Progress</Text>
-              <Text style={styles.progressPct}>{progressPct}%</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View
-                style={[styles.progressBarFill, {width: `${progressPct}%`}]}
-              />
-            </View>
-            <View style={commonStyles.spaceBetween}>
-              <Text style={styles.remainingLabel}>Remaining</Text>
-              <Text style={styles.remainingValue}>
-                $
-                {item.remainingBalance.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
-            </View>
-            <View style={[commonStyles.spaceBetween, {marginTop: 6}]}>
-              <Text style={styles.remainingLabel}>Monthly Payment</Text>
-              <Text style={[styles.remainingValue, {color: colors.success}]}>
-                $
-                {item.monthlyPayment.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
-            </View>
-          </>
-        )}
-      </View>
-    );
-  };
-
-  if (loading) {
+  if (loading)
     return (
       <View style={commonStyles.centerContent}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading Loans...</Text>
+        <Text style={styles.loadingText}>Loading loans...</Text>
       </View>
     );
-  }
 
-  if (error && !loans.length) {
+  if (screen === 'apply')
     return (
-      <View style={commonStyles.centerContent}>
-        <Text style={styles.errorEmoji}>⚠️</Text>
-        <Text style={styles.errorTitle}>Unable to Load Loans</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity
-          style={[commonStyles.button, styles.retryBtn]}
-          onPress={fetchLoans}>
-          <Text style={commonStyles.buttonText}>Try Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.dashboardLink}
-          onPress={() => navigation.navigate('Dashboard')}>
-          <Text style={styles.dashboardLinkText}>← Back to Dashboard</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={styles.applyScroll}
+        keyboardShouldPersistTaps="handled">
+        <Text style={styles.applyTitle}>Apply for a Loan</Text>
+        <Text style={styles.applySub}>
+          Choose your loan type and fill in the details below.
+        </Text>
 
-  if (showLoanForm) {
-    return (
-      <View style={[commonStyles.container, {flex: 1}]}>
-        <LoanApplicationForm
-          loanTypes={loanTypes}
-          onClose={() => setShowLoanForm(false)}
-          onSubmit={handleLoanSubmit}
+        {formError ? (
+          <View style={commonStyles.errorContainer}>
+            <Text style={commonStyles.errorText}>{formError}</Text>
+          </View>
+        ) : null}
+
+        {/* Loan type selection */}
+        <Text style={styles.applyLabel}>Loan Type</Text>
+        {loanTypes.length === 0 ? (
+          <Text style={styles.noTypesText}>
+            No loan types available at this time.
+          </Text>
+        ) : (
+          <View style={styles.typeGrid}>
+            {loanTypes.map(t => (
+              <TouchableOpacity
+                key={t.id}
+                style={[
+                  styles.typeCard,
+                  selectedType === t.id && styles.typeCardActive,
+                ]}
+                onPress={() => setSelectedType(t.id)}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.typeName,
+                    selectedType === t.id && styles.typeNameActive,
+                  ]}>
+                  {t.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.typeRate,
+                    selectedType === t.id && styles.typeRateActive,
+                  ]}>
+                  From {t.baseRate}%
+                </Text>
+                <Text
+                  style={[
+                    styles.typeMax,
+                    selectedType === t.id && styles.typeMaxActive,
+                  ]}>
+                  Up to ${t.maxAmount.toLocaleString()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <Text style={styles.applyLabel}>Loan Amount ($)</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="e.g. 10000"
+          placeholderTextColor={colors.textTertiary}
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="numeric"
+          editable={!submitting}
         />
-      </View>
+
+        <Text style={styles.applyLabel}>Term (months)</Text>
+        <TextInput
+          style={commonStyles.input}
+          placeholder="e.g. 36"
+          placeholderTextColor={colors.textTertiary}
+          value={term}
+          onChangeText={setTerm}
+          keyboardType="numeric"
+          editable={!submitting}
+        />
+
+        <View style={styles.applyBtnRow}>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => setScreen('list')}
+            activeOpacity={0.7}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitBtn, submitting && styles.btnDisabled]}
+            onPress={handleApply}
+            disabled={submitting}
+            activeOpacity={0.85}>
+            {submitting ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Text style={commonStyles.buttonText}>Submit Application</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     );
-  }
 
   return (
-    <View style={commonStyles.container}>
-      <View style={commonStyles.spaceBetween}>
-        <Text style={styles.screenTitle}>
-          {loans.length > 0
-            ? `${loans.length} Loan${loans.length !== 1 ? 's' : ''}`
-            : 'Your Loans'}
-        </Text>
+    <View style={styles.root}>
+      {/* Summary banner */}
+      <View style={styles.summaryBanner}>
+        <View>
+          <Text style={styles.summaryLabel}>Active Loan Balance</Text>
+          <Text style={styles.summaryValue}>
+            $
+            {totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={styles.applyButton}
-          onPress={() => setShowLoanForm(true)}
+          style={styles.applyHeroBtn}
+          onPress={() => setScreen('apply')}
           activeOpacity={0.85}>
-          <Text style={styles.applyButtonText}>+ Apply</Text>
+          <Text style={styles.applyHeroBtnText}>+ Apply</Text>
         </TouchableOpacity>
+        <View style={styles.decor1} />
+        <View style={styles.decor2} />
       </View>
 
-      <FlatList
-        data={loans}
-        renderItem={renderLoanItem}
-        keyExtractor={item => item.id}
-        ListEmptyComponent={
-          <View style={commonStyles.emptyStateContainer}>
-            <Text style={styles.emptyIcon}>🏦</Text>
-            <Text style={commonStyles.emptyStateTitle}>No Loans Yet</Text>
-            <Text style={commonStyles.emptyStateSubtitle}>
-              Apply for a loan to get started with competitive rates.
-            </Text>
-            <TouchableOpacity
-              style={[commonStyles.button, styles.emptyApplyBtn]}
-              onPress={() => setShowLoanForm(true)}>
-              <Text style={commonStyles.buttonText}>Apply for a Loan</Text>
-            </TouchableOpacity>
-          </View>
-        }
-        contentContainerStyle={
-          loans.length === 0 ? {flex: 1} : {paddingBottom: 24}
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>⚠ {error}</Text>
+        </View>
+      ) : null}
+
+      {loans.length === 0 ? (
+        <View style={commonStyles.emptyStateContainer}>
+          <Text style={styles.emptyEmoji}>🏦</Text>
+          <Text style={commonStyles.emptyStateTitle}>No loans yet</Text>
+          <Text style={commonStyles.emptyStateSubtitle}>
+            Apply for a loan to get started.
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyApplyBtn}
+            onPress={() => setScreen('apply')}
+            activeOpacity={0.85}>
+            <Text style={commonStyles.buttonText}>Apply for a Loan</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={loans}
+          keyExtractor={l => l.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({item}) => {
+            const sc = statusConfig(item.status);
+            return (
+              <View style={styles.loanCard}>
+                <View style={styles.loanCardTop}>
+                  <View>
+                    <Text style={styles.loanType}>{item.type}</Text>
+                    <Text style={styles.loanDate}>
+                      Applied{' '}
+                      {new Date(item.appliedDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                  <View style={[styles.statusPill, {backgroundColor: sc.bg}]}>
+                    <Text style={[styles.statusPillText, {color: sc.color}]}>
+                      {sc.label}
+                    </Text>
+                  </View>
+                </View>
+                <View style={commonStyles.divider} />
+                <View style={styles.loanStatsRow}>
+                  {[
+                    {
+                      label: 'Amount',
+                      value: `$${item.amount.toLocaleString()}`,
+                    },
+                    {label: 'Rate', value: `${item.interestRate}%`},
+                    {
+                      label: 'Monthly',
+                      value: `$${item.monthlyPayment.toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                      })}`,
+                    },
+                  ].map(s => (
+                    <View key={s.label} style={styles.loanStat}>
+                      <Text style={styles.loanStatLabel}>{s.label}</Text>
+                      <Text style={styles.loanStatValue}>{s.value}</Text>
+                    </View>
+                  ))}
+                </View>
+                {['ACTIVE', 'APPROVED'].includes(item.status) && (
+                  <View style={styles.progressWrap}>
+                    <View style={commonStyles.spaceBetween}>
+                      <Text style={styles.progressLabel}>Remaining</Text>
+                      <Text style={styles.progressValue}>
+                        $
+                        {item.remainingBalance.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${Math.max(
+                              5,
+                              100 - (item.remainingBalance / item.amount) * 100,
+                            )}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          }}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  loadingText: {marginTop: 12, fontSize: 15, color: colors.textSecondary},
-  errorEmoji: {fontSize: 48, marginBottom: 16},
-  errorTitle: {
-    fontSize: 20,
+  root: {flex: 1, backgroundColor: colors.background},
+
+  summaryBanner: {
+    backgroundColor: colors.gradientStart,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 28,
     fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-    textAlign: 'center',
+    color: colors.white,
+    letterSpacing: -0.8,
   },
-  errorMessage: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryBtn: {minWidth: 160, marginBottom: 12},
-  dashboardLink: {paddingVertical: 8},
-  dashboardLinkText: {color: colors.primary, fontSize: 15, fontWeight: '500'},
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 16,
-  },
-  applyButton: {
-    backgroundColor: colors.secondary,
+  applyHeroBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 10,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  applyButtonText: {color: colors.white, fontWeight: '700', fontSize: 15},
-  emptyIcon: {fontSize: 48, marginBottom: 8},
-  emptyApplyBtn: {marginTop: 16, minWidth: 200},
+  applyHeroBtnText: {fontSize: 14, color: colors.white, fontWeight: '700'},
+  decor1: {
+    position: 'absolute',
+    right: -40,
+    top: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  decor2: {
+    position: 'absolute',
+    right: 60,
+    bottom: -60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+  errorBanner: {
+    backgroundColor: colors.errorLight,
+    margin: 16,
+    borderRadius: 10,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.error,
+  },
+  errorBannerText: {color: colors.error, fontSize: 13},
+
+  listContent: {padding: 16, flexGrow: 1},
   loanCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.backgroundWhite,
     borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-    shadowColor: colors.shadow,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
   },
-  loanLeft: {flex: 1, marginRight: 10},
+  loanCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
   loanType: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 3,
   },
-  loanDate: {fontSize: 13, color: colors.textSecondary},
-  loanStatusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  loanStatusText: {fontSize: 12, fontWeight: '700'},
-  loanAmountRow: {
-    flexDirection: 'row',
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    marginBottom: 12,
-  },
-  loanAmountBlock: {flex: 1, alignItems: 'center'},
-  loanAmountLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  loanAmountValue: {fontSize: 15, fontWeight: '700', color: colors.textPrimary},
-  progressRow: {
+  loanDate: {fontSize: 12, color: colors.textSecondary},
+  statusPill: {borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4},
+  statusPillText: {fontSize: 12, fontWeight: '600'},
+  loanStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    paddingVertical: 12,
   },
-  progressLabel: {fontSize: 13, color: colors.textSecondary, fontWeight: '500'},
-  progressPct: {fontSize: 13, color: colors.primary, fontWeight: '700'},
-  progressBarBg: {
+  loanStat: {alignItems: 'center'},
+  loanStatLabel: {fontSize: 12, color: colors.textSecondary, marginBottom: 3},
+  loanStatValue: {fontSize: 15, fontWeight: '700', color: colors.textPrimary},
+  progressWrap: {marginTop: 8},
+  progressLabel: {fontSize: 12, color: colors.textSecondary},
+  progressValue: {fontSize: 13, fontWeight: '600', color: colors.textPrimary},
+  progressTrack: {
     height: 6,
     backgroundColor: colors.surface,
     borderRadius: 3,
+    marginTop: 8,
     overflow: 'hidden',
-    marginBottom: 12,
   },
-  progressBarFill: {
+  progressFill: {
     height: '100%',
     backgroundColor: colors.primary,
     borderRadius: 3,
   },
-  remainingLabel: {fontSize: 13, color: colors.textSecondary},
-  remainingValue: {fontSize: 14, fontWeight: '700', color: colors.textPrimary},
-  // Form styles
-  formScroll: {flex: 1},
-  formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+
+  emptyEmoji: {fontSize: 48, marginBottom: 12},
+  emptyApplyBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 13,
+    borderRadius: 12,
+    marginTop: 20,
   },
-  formTitle: {
+
+  // Apply screen
+  applyScroll: {padding: 20, paddingBottom: 40},
+  applyTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    marginBottom: 4,
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {fontSize: 15, color: colors.textSecondary, fontWeight: '600'},
-  formLabel: {
-    fontSize: 14,
+  applySub: {fontSize: 14, color: colors.textSecondary, marginBottom: 24},
+  applyLabel: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 8,
   },
-  loanTypesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 14,
-  },
-  loanTypeChip: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
+  noTypesText: {fontSize: 14, color: colors.textSecondary, marginBottom: 16},
+  typeGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20},
+  typeCard: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
+    minWidth: '45%',
+    flex: 1,
+  },
+  typeCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  typeName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  typeNameActive: {color: colors.primary},
+  typeRate: {fontSize: 13, color: colors.textSecondary, marginBottom: 2},
+  typeRateActive: {color: colors.primaryDark},
+  typeMax: {fontSize: 12, color: colors.textTertiary},
+  typeMaxActive: {color: colors.primary},
+  applyBtnRow: {flexDirection: 'row', gap: 10, marginTop: 8},
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: 'center',
   },
-  loanTypeChipSelected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
-  },
-  loanTypeChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 3,
-    textAlign: 'center',
-  },
-  loanTypeChipTextSelected: {color: colors.primary},
-  loanTypeRate: {fontSize: 12, color: colors.textSecondary},
-  loanTypeRateSelected: {color: colors.primary},
-  loanTypeInfo: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 16,
-  },
-  loanTypeInfoText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  purposeInput: {height: 88, paddingTop: 12},
-  formButtons: {flexDirection: 'row', gap: 12, marginTop: 8, marginBottom: 40},
-  cancelFormBtn: {flex: 1},
+  cancelBtnText: {fontSize: 15, fontWeight: '600', color: colors.textSecondary},
   submitBtn: {
-    flex: 1,
-    shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    flex: 2,
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  disabledBtn: {opacity: 0.65},
+  btnDisabled: {opacity: 0.6},
+  loadingText: {marginTop: 12, fontSize: 15, color: colors.textSecondary},
 });
 
 export default LoansScreen;

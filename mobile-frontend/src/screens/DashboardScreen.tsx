@@ -15,7 +15,7 @@ import type {RootStackParamList} from '../navigation/AppNavigator';
 import {getUserAccounts} from '../services/api';
 import {colors, commonStyles} from '../styles/commonStyles';
 
-type DashboardScreenNavigationProp = NativeStackNavigationProp<
+type DashboardNavProp = NativeStackNavigationProp<
   RootStackParamList,
   'Dashboard'
 >;
@@ -34,17 +34,18 @@ interface QuickAction {
   screen: keyof RootStackParamList;
   params?: Record<string, unknown>;
   color: string;
+  bg: string;
 }
 
 const DashboardScreen = () => {
-  const navigation = useNavigation<DashboardScreenNavigationProp>();
+  const navigation = useNavigation<DashboardNavProp>();
   const {userData, logout} = useAuth();
   const [accounts, setAccounts] = useState<AccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
   const primaryAccount = accounts[0];
 
   const fetchAccounts = useCallback(async (isRefreshing = false) => {
@@ -54,14 +55,12 @@ const DashboardScreen = () => {
     setError(null);
     try {
       const response = await getUserAccounts();
-      const data = Array.isArray(response.data) ? response.data : [];
-      setAccounts(data);
+      setAccounts(Array.isArray(response.data) ? response.data : []);
     } catch (err: unknown) {
       const e = err as {
         response?: {data?: {message?: string}};
         message?: string;
       };
-      console.error('Failed to fetch accounts:', err);
       setError(
         e.response?.data?.message ||
           e.message ||
@@ -76,14 +75,17 @@ const DashboardScreen = () => {
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchAccounts(true);
   };
-
   const handleLogout = () => {
-    logout().catch(err => console.error('Logout error:', err));
+    logout().catch(e => console.error(e));
+  };
+
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   };
 
   const quickActions: QuickAction[] = [
@@ -93,20 +95,23 @@ const DashboardScreen = () => {
       screen: 'Transactions',
       params: primaryAccount ? {accountId: primaryAccount.id} : {},
       color: colors.primary,
+      bg: '#eff6ff',
     },
     {
       label: 'Loans',
       icon: '🏦',
       screen: 'Loans',
       params: primaryAccount ? {accountId: primaryAccount.id} : {},
-      color: '#5856D6',
+      color: '#7c3aed',
+      bg: '#f5f3ff',
     },
     {
       label: 'Savings',
       icon: '🎯',
       screen: 'SavingsGoals',
       params: primaryAccount ? {accountId: primaryAccount.id} : {},
-      color: colors.secondary,
+      color: colors.success,
+      bg: '#ecfdf5',
     },
     {
       label: 'Account',
@@ -114,19 +119,33 @@ const DashboardScreen = () => {
       screen: 'AccountDetails',
       params: primaryAccount ? {accountId: primaryAccount.id} : {},
       color: colors.warning,
+      bg: '#fffbeb',
     },
   ];
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      return 'Good morning';
-    }
-    if (hour < 17) {
-      return 'Good afternoon';
-    }
-    return 'Good evening';
-  };
+  const statCards = [
+    {
+      label: 'Monthly Income',
+      value: '$5,240',
+      change: '+8.2%',
+      up: true,
+      color: colors.success,
+    },
+    {
+      label: 'Monthly Expenses',
+      value: '$3,570',
+      change: '3.1%',
+      up: false,
+      color: colors.error,
+    },
+    {
+      label: 'Savings Goal',
+      value: '68%',
+      change: 'On track',
+      up: true,
+      color: colors.secondary,
+    },
+  ];
 
   if (loading && !refreshing) {
     return (
@@ -139,7 +158,7 @@ const DashboardScreen = () => {
 
   return (
     <ScrollView
-      style={commonStyles.container}
+      style={styles.root}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -149,30 +168,27 @@ const DashboardScreen = () => {
           colors={[colors.primary]}
         />
       }>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>
-            {getGreeting()},{' '}
+      {/* ── Hero Banner ───────────────────────────────────────── */}
+      <View style={styles.heroBanner}>
+        {/* top row */}
+        <View style={styles.heroTopRow}>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()},</Text>
             <Text style={styles.userName}>
-              {userData?.firstName ?? 'there'}
+              {userData?.firstName ?? 'there'} 👋
             </Text>
-          </Text>
-          <Text style={styles.headerSubtitle}>
-            Here's your financial overview
-          </Text>
+            <Text style={styles.heroSub}>Here's your financial overview</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.signOutBtn}
+            onPress={handleLogout}
+            activeOpacity={0.7}>
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.7}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Balance Card */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Total Balance</Text>
+        {/* Balance */}
+        <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
         <Text style={styles.balanceAmount}>
           $
           {totalBalance.toLocaleString(undefined, {
@@ -181,232 +197,379 @@ const DashboardScreen = () => {
           })}
         </Text>
         {primaryAccount && (
-          <View style={styles.accountNumberBadge}>
-            <Text style={styles.accountNumberText}>
-              {primaryAccount.accountType} · {primaryAccount.accountNumber}
-            </Text>
-          </View>
-        )}
-        {error && (
-          <Text style={styles.balanceError}>⚠ Could not load account data</Text>
-        )}
-      </View>
-
-      {/* Quick Actions */}
-      <Text style={commonStyles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.quickActionsGrid}>
-        {quickActions.map(action => (
           <TouchableOpacity
-            key={action.screen}
-            style={styles.quickActionItem}
+            style={styles.accountPill}
             onPress={() =>
-              navigation.navigate(action.screen as any, action.params as any)
+              navigation.navigate('AccountDetails', {
+                accountId: primaryAccount.id,
+              })
             }
-            activeOpacity={0.75}>
-            <View
-              style={[
-                styles.quickActionIcon,
-                {backgroundColor: action.color + '18'},
-              ]}>
-              <Text style={styles.quickActionEmoji}>{action.icon}</Text>
-            </View>
-            <Text style={[styles.quickActionLabel, {color: action.color}]}>
-              {action.label}
+            activeOpacity={0.8}>
+            <Text style={styles.accountPillText}>
+              {primaryAccount.accountType} · ****
+              {String(primaryAccount.accountNumber).slice(-4)}
+            </Text>
+            <Text style={styles.accountPillArrow}> ›</Text>
+          </TouchableOpacity>
+        )}
+        {error && <Text style={styles.heroBannerError}>⚠ {error}</Text>}
+
+        {/* CTAs */}
+        <View style={styles.heroCtas}>
+          <TouchableOpacity
+            style={styles.heroCtaBtn}
+            onPress={() =>
+              navigation.navigate(
+                'Transactions',
+                primaryAccount ? {accountId: primaryAccount.id} : {},
+              )
+            }
+            activeOpacity={0.8}>
+            <Text style={styles.heroCtaText}>↕ Transfer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.heroCtaBtn, styles.heroCtaBtnOutline]}
+            onPress={() =>
+              primaryAccount &&
+              navigation.navigate('AccountDetails', {
+                accountId: primaryAccount.id,
+              })
+            }
+            activeOpacity={0.8}>
+            <Text style={[styles.heroCtaText, styles.heroCtaTextOutline]}>
+              📄 Statement
             </Text>
           </TouchableOpacity>
-        ))}
+        </View>
+
+        {/* decorative circles */}
+        <View style={styles.decor1} pointerEvents="none" />
+        <View style={styles.decor2} pointerEvents="none" />
       </View>
 
-      {/* Accounts Section */}
-      {accounts.length > 1 && (
-        <>
-          <Text style={commonStyles.sectionTitle}>Your Accounts</Text>
-          {accounts.map(account => (
+      <View style={styles.bodyPad}>
+        {/* ── Stat Cards ──────────────────────────────────────── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.statScroll}
+          contentContainerStyle={styles.statScrollContent}>
+          {statCards.map((s, i) => (
+            <View key={i} style={styles.statCard}>
+              <Text style={styles.statLabel}>{s.label}</Text>
+              <Text style={styles.statValue}>{s.value}</Text>
+              <View
+                style={[
+                  styles.statBadge,
+                  {backgroundColor: s.up ? '#ecfdf5' : '#fef2f2'},
+                ]}>
+                <Text
+                  style={[
+                    styles.statBadgeText,
+                    {color: s.up ? colors.success : colors.error},
+                  ]}>
+                  {s.up ? '▲' : '▼'} {s.change}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* ── Quick Actions ────────────────────────────────────── */}
+        <Text style={commonStyles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.actionsGrid}>
+          {quickActions.map(a => (
             <TouchableOpacity
-              key={account.id}
-              style={commonStyles.card}
+              key={a.screen}
+              style={[styles.actionCard]}
               onPress={() =>
-                navigation.navigate('AccountDetails', {accountId: account.id})
+                navigation.navigate(a.screen as any, a.params as any)
               }
-              activeOpacity={0.8}>
-              <View style={commonStyles.spaceBetween}>
-                <View>
-                  <Text style={styles.accountType}>{account.accountType}</Text>
-                  <Text style={styles.accountNum}>{account.accountNumber}</Text>
+              activeOpacity={0.75}>
+              <View style={[styles.actionIconBox, {backgroundColor: a.bg}]}>
+                <Text style={styles.actionIcon}>{a.icon}</Text>
+              </View>
+              <Text style={[styles.actionLabel, {color: a.color}]}>
+                {a.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ── Accounts ─────────────────────────────────────────── */}
+        {accounts.length > 0 && (
+          <>
+            <Text style={commonStyles.sectionTitle}>Your Accounts</Text>
+            {accounts.map(acc => (
+              <TouchableOpacity
+                key={acc.id}
+                style={styles.accountCard}
+                onPress={() =>
+                  navigation.navigate('AccountDetails', {accountId: acc.id})
+                }
+                activeOpacity={0.8}>
+                <View style={styles.accountCardLeft}>
+                  <View style={styles.accountIcon}>
+                    <Text style={styles.accountIconText}>🏦</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.accountType}>{acc.accountType}</Text>
+                    <Text style={styles.accountNum}>
+                      ****{String(acc.accountNumber).slice(-4)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.accountBalanceContainer}>
-                  <Text style={styles.accountBalance}>
+                <View style={styles.accountCardRight}>
+                  <Text style={styles.accountBal}>
                     $
-                    {account.balance.toLocaleString(undefined, {
+                    {acc.balance.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </Text>
                   <View
                     style={[
-                      styles.statusDot,
+                      styles.statusPill,
                       {
                         backgroundColor:
-                          account.status === 'ACTIVE'
-                            ? colors.success
-                            : colors.warning,
+                          acc.status === 'ACTIVE' ? '#ecfdf5' : '#fffbeb',
                       },
-                    ]}
-                  />
+                    ]}>
+                    <Text
+                      style={[
+                        styles.statusPillText,
+                        {
+                          color:
+                            acc.status === 'ACTIVE'
+                              ? colors.success
+                              : colors.warning,
+                        },
+                      ]}>
+                      {acc.status === 'ACTIVE' ? 'Active' : acc.status}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </>
-      )}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
-      <View style={styles.bottomSpacer} />
+        <View style={styles.bottomSpacer} />
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
+  root: {flex: 1, backgroundColor: colors.background},
+
+  /* Hero */
+  heroBanner: {
+    backgroundColor: colors.gradientStart,
+    paddingHorizontal: 22,
+    paddingTop: 56,
+    paddingBottom: 32,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingTop: 4,
+    marginBottom: 24,
   },
-  greeting: {
-    fontSize: 20,
-    color: colors.textSecondary,
-    fontWeight: '400',
-  },
+  greeting: {fontSize: 15, color: 'rgba(255,255,255,0.7)', fontWeight: '400'},
   userName: {
-    color: colors.textPrimary,
+    fontSize: 22,
     fontWeight: '700',
+    color: colors.white,
+    letterSpacing: -0.3,
   },
-  headerSubtitle: {
-    fontSize: 13,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  logoutButton: {
+  heroSub: {fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2},
+  signOutBtn: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  logoutText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  balanceCard: {
-    borderRadius: 20,
-    padding: 28,
-    marginBottom: 24,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
+  signOutText: {fontSize: 13, color: colors.white, fontWeight: '500'},
   balanceLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   balanceAmount: {
-    fontSize: 40,
+    fontSize: 42,
     fontWeight: '700',
     color: colors.white,
-    letterSpacing: -1,
-    marginBottom: 16,
+    letterSpacing: -1.5,
+    marginBottom: 14,
   },
-  accountNumberBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  accountPill: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    marginBottom: 20,
   },
-  accountNumberText: {
-    fontSize: 13,
-    color: colors.white,
-    fontWeight: '500',
-  },
-  balanceError: {
-    marginTop: 8,
+  accountPillText: {fontSize: 13, color: colors.white, fontWeight: '500'},
+  accountPillArrow: {fontSize: 16, color: 'rgba(255,255,255,0.7)'},
+  heroBannerError: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
+    marginBottom: 12,
   },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-    gap: 10,
+  heroCtas: {flexDirection: 'row', gap: 10},
+  heroCtaBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  quickActionItem: {
+  heroCtaBtnOutline: {backgroundColor: 'transparent'},
+  heroCtaText: {fontSize: 14, color: colors.white, fontWeight: '600'},
+  heroCtaTextOutline: {color: 'rgba(255,255,255,0.85)'},
+  decor1: {
+    position: 'absolute',
+    right: -50,
+    top: -50,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  decor2: {
+    position: 'absolute',
+    right: 40,
+    bottom: -80,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+  bodyPad: {paddingHorizontal: 20, paddingTop: 20},
+  loadingText: {marginTop: 12, fontSize: 15, color: colors.textSecondary},
+
+  /* Stat strip */
+  statScroll: {marginBottom: 24},
+  statScrollContent: {paddingRight: 4, gap: 12},
+  statCard: {
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 14,
+    padding: 16,
+    width: 160,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  statBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  statBadgeText: {fontSize: 11, fontWeight: '600'},
+
+  /* Quick actions */
+  actionsGrid: {flexDirection: 'row', gap: 10, marginBottom: 28},
+  actionCard: {
     flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: 16,
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 14,
     paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {elevation: 2},
+    }),
   },
-  quickActionIcon: {
+  actionIconBox: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
-  quickActionEmoji: {
-    fontSize: 22,
+  actionIcon: {fontSize: 22},
+  actionLabel: {fontSize: 12, fontWeight: '600'},
+
+  /* Account cards */
+  accountCard: {
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
   },
-  quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.1,
+  accountCardLeft: {flexDirection: 'row', alignItems: 'center', gap: 12},
+  accountIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  accountIconText: {fontSize: 20},
   accountType: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  accountNum: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  accountBalanceContainer: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  accountBalance: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  bottomSpacer: {
-    height: 32,
-  },
+  accountNum: {fontSize: 13, color: colors.textSecondary},
+  accountCardRight: {alignItems: 'flex-end', gap: 6},
+  accountBal: {fontSize: 16, fontWeight: '700', color: colors.primary},
+  statusPill: {borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3},
+  statusPillText: {fontSize: 11, fontWeight: '600'},
+
+  bottomSpacer: {height: 40},
 });
 
 export default DashboardScreen;

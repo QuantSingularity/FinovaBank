@@ -25,11 +25,7 @@ export type RootStackParamList = {
     transaction?: Record<string, unknown>;
   };
   TransactionFilters: {
-    currentFilter?: {
-      startDate: string;
-      endDate: string;
-      type?: string;
-    };
+    currentFilter?: {startDate: string; endDate: string; type?: string};
     onFilterApply?: (filter: {
       startDate: string;
       endDate: string;
@@ -57,9 +53,16 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: {backgroundColor: colors.primary},
-          headerTintColor: colors.background,
-          headerTitleStyle: {fontWeight: '600'},
+          headerStyle: {backgroundColor: colors.backgroundWhite},
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: {
+            fontWeight: '700',
+            fontSize: 17,
+            color: colors.textPrimary,
+          },
+          headerShadowVisible: false,
+          headerBackTitleVisible: false,
+          contentStyle: {backgroundColor: colors.background},
         }}>
         {userToken == null ? (
           <>
@@ -71,10 +74,7 @@ const AppNavigator = () => {
             <Stack.Screen
               name="Register"
               component={RegisterScreen}
-              options={{
-                title: 'Create Account',
-                headerBackTitleVisible: false,
-              }}
+              options={{title: 'Create Account'}}
             />
           </>
         ) : (
@@ -82,7 +82,7 @@ const AppNavigator = () => {
             <Stack.Screen
               name="Dashboard"
               component={DashboardScreen}
-              options={{title: 'FinovaBank', headerBackVisible: false}}
+              options={{headerShown: false}}
             />
             <Stack.Screen
               name="AccountDetails"
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundWhite,
   },
 });
 

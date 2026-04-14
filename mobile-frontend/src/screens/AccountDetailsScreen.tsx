@@ -8,6 +8,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,12 +20,8 @@ import type {RootStackParamList} from '../navigation/AppNavigator';
 import {getAccountDetails} from '../services/api';
 import {colors, commonStyles} from '../styles/commonStyles';
 
-type AccountDetailsScreenRouteProp = RouteProp<
-  RootStackParamList,
-  'AccountDetails'
->;
-
-type AccountDetailsScreenNavigationProp = NativeStackNavigationProp<
+type AccountDetailsRoute = RouteProp<RootStackParamList, 'AccountDetails'>;
+type AccountDetailsNav = NativeStackNavigationProp<
   RootStackParamList,
   'AccountDetails'
 >;
@@ -41,10 +38,11 @@ interface AccountDetailsData {
   status: 'ACTIVE' | 'INACTIVE' | 'FROZEN' | 'CLOSED';
   interestRate?: number;
   lastUpdated: string;
+  currency?: string;
 }
 
-const getStatusConfig = (status: string) => {
-  switch (status) {
+const statusConfig = (s: string) => {
+  switch (s) {
     case 'ACTIVE':
       return {color: colors.success, bg: colors.successLight, label: 'Active'};
     case 'INACTIVE':
@@ -58,46 +56,36 @@ const getStatusConfig = (status: string) => {
     case 'CLOSED':
       return {color: colors.textSecondary, bg: colors.surface, label: 'Closed'};
     default:
-      return {color: colors.textSecondary, bg: colors.surface, label: status};
+      return {color: colors.textSecondary, bg: colors.surface, label: s};
   }
 };
 
 const AccountDetailsScreen = () => {
-  const route = useRoute<AccountDetailsScreenRouteProp>();
-  const navigation = useNavigation<AccountDetailsScreenNavigationProp>();
+  const route = useRoute<AccountDetailsRoute>();
+  const navigation = useNavigation<AccountDetailsNav>();
   const {userData} = useAuth();
-
-  const accountId = route.params?.accountId || (userData?.id ?? '');
-
-  const [accountDetails, setAccountDetails] =
-    useState<AccountDetailsData | null>(null);
+  const accountId = route.params?.accountId || userData?.id || '';
+  const [account, setAccount] = useState<AccountDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDetails = useCallback(async () => {
     if (!accountId) {
       setLoading(false);
-      setError('No account ID available');
+      setError('No account ID.');
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
-      const response = await getAccountDetails(accountId);
-      setAccountDetails(response.data);
-    } catch (err: unknown) {
-      const e = err as {
-        response?: {data?: {message?: string}};
-        message?: string;
-      };
-      console.error('Failed to fetch account details:', err);
-      const errorMessage =
+      const res = await getAccountDetails(accountId);
+      setAccount(res.data);
+    } catch (e: any) {
+      setError(
         e.response?.data?.message ||
-        e.message ||
-        'Failed to load account details.';
-      setError(errorMessage);
-      Alert.alert('Error', errorMessage);
+          e.message ||
+          'Failed to load account details.',
+      );
     } finally {
       setLoading(false);
     }
@@ -107,318 +95,358 @@ const AccountDetailsScreen = () => {
     fetchDetails();
   }, [fetchDetails]);
 
-  if (loading) {
+  if (loading)
     return (
       <View style={commonStyles.centerContent}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading Account Details...</Text>
+        <Text style={styles.loadingText}>Loading account details...</Text>
       </View>
     );
-  }
 
-  if (error) {
+  if (error || !account)
     return (
       <View style={commonStyles.centerContent}>
         <Text style={styles.errorEmoji}>⚠️</Text>
-        <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
+        <Text style={styles.errorTitle}>Unable to load account</Text>
+        <Text style={styles.errorMsg}>{error}</Text>
         <TouchableOpacity
-          style={[commonStyles.button, styles.actionBtn]}
-          onPress={fetchDetails}>
-          <Text style={commonStyles.buttonText}>Try Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.backLink}
-          onPress={() => navigation.navigate('Dashboard')}>
-          <Text style={styles.backLinkText}>← Back to Dashboard</Text>
+          style={styles.retryBtn}
+          onPress={fetchDetails}
+          activeOpacity={0.8}>
+          <Text style={styles.retryBtnText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
-  }
 
-  if (!accountDetails) {
-    return (
-      <View style={commonStyles.centerContent}>
-        <Text style={styles.errorEmoji}>🔍</Text>
-        <Text style={styles.errorTitle}>No Account Found</Text>
-        <TouchableOpacity
-          style={[commonStyles.button, styles.actionBtn]}
-          onPress={() => navigation.navigate('Dashboard')}>
-          <Text style={commonStyles.buttonText}>Return to Dashboard</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const sc = statusConfig(account.status);
 
-  const statusConfig = getStatusConfig(accountDetails.status);
-
-  const DetailRow = ({
-    label,
-    value,
-    valueStyle,
-  }: {
-    label: string;
-    value: string;
-    valueStyle?: object;
-  }) => (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={[styles.detailValue, valueStyle]}>{value}</Text>
-    </View>
-  );
+  const infoRows = [
+    {label: 'Account Number', value: account.accountNumber},
+    {label: 'Routing Number', value: account.routingNumber || 'N/A'},
+    {label: 'Account Type', value: account.accountType},
+    {label: 'Currency', value: account.currency || 'USD'},
+    {
+      label: 'Opened',
+      value: new Date(account.openDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+    },
+    {
+      label: 'Last Updated',
+      value: new Date(account.lastUpdated).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+    },
+    ...(account.interestRate
+      ? [{label: 'Interest Rate', value: `${account.interestRate}% APY`}]
+      : []),
+  ];
 
   return (
-    <ScrollView
-      style={commonStyles.container}
-      showsVerticalScrollIndicator={false}>
-      {/* Balance Hero */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceCardLabel}>Current Balance</Text>
-        <Text style={styles.balanceCardAmount}>
-          $
-          {accountDetails.balance.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-        <View style={styles.statusRow}>
-          <View
-            style={[styles.statusBadge, {backgroundColor: statusConfig.bg}]}>
-            <View
-              style={[styles.statusDot, {backgroundColor: statusConfig.color}]}
-            />
-            <Text style={[styles.statusBadgeText, {color: statusConfig.color}]}>
-              {statusConfig.label}
+    <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
+      {/* Balance hero card */}
+      <View style={styles.heroBanner}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroLabel}>ACCOUNT BALANCE</Text>
+            <Text style={styles.heroBalance}>
+              $
+              {account.balance.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </Text>
           </View>
-          <Text style={styles.accountTypeLabel}>
-            {accountDetails.accountType}
-          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {backgroundColor: 'rgba(255,255,255,0.2)'},
+            ]}>
+            <Text style={styles.statusBadgeText}>{sc.label}</Text>
+          </View>
         </View>
+        <Text style={styles.heroAccountType}>{account.accountType}</Text>
+        <Text style={styles.heroAccountNum}>
+          ****{String(account.accountNumber).slice(-4)}
+        </Text>
+        <View style={styles.decor1} />
+        <View style={styles.decor2} />
       </View>
 
-      {/* Account Details */}
-      <Text style={commonStyles.sectionTitle}>Account Information</Text>
-      <View style={commonStyles.card}>
-        <DetailRow
-          label="Account Number"
-          value={accountDetails.accountNumber}
-        />
-        {accountDetails.routingNumber ? (
-          <DetailRow
-            label="Routing Number"
-            value={accountDetails.routingNumber}
-          />
-        ) : null}
-        <DetailRow
-          label="Opened"
-          value={new Date(accountDetails.openDate).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        />
-        {accountDetails.interestRate !== undefined ? (
-          <DetailRow
-            label="Interest Rate"
-            value={`${accountDetails.interestRate.toFixed(2)}% APY`}
-            valueStyle={styles.interestRateValue}
-          />
-        ) : null}
+      <View style={styles.bodyPad}>
+        {/* Action row */}
+        <View style={styles.actionRow}>
+          {[
+            {
+              icon: '↕',
+              label: 'Transfer',
+              onPress: () => navigation.navigate('Transactions', {accountId}),
+            },
+            {
+              icon: '📊',
+              label: 'Transactions',
+              onPress: () => navigation.navigate('Transactions', {accountId}),
+            },
+            {
+              icon: '🏦',
+              label: 'Loans',
+              onPress: () => navigation.navigate('Loans', {accountId}),
+            },
+            {
+              icon: '🎯',
+              label: 'Savings',
+              onPress: () => navigation.navigate('SavingsGoals', {accountId}),
+            },
+          ].map(a => (
+            <TouchableOpacity
+              key={a.label}
+              style={styles.actionBtn}
+              onPress={a.onPress}
+              activeOpacity={0.75}>
+              <View style={styles.actionIconBox}>
+                <Text style={styles.actionIcon}>{a.icon}</Text>
+              </View>
+              <Text style={styles.actionLabel}>{a.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Account holder */}
+        <Text style={commonStyles.sectionTitle}>Account Holder</Text>
+        <View style={styles.infoCard}>
+          <View style={styles.holderRow}>
+            <View style={styles.holderAvatar}>
+              <Text style={styles.holderAvatarText}>
+                {account.name?.charAt(0) || 'U'}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.holderName}>{account.name}</Text>
+              <Text style={styles.holderEmail}>{account.email}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Account details */}
+        <Text style={commonStyles.sectionTitle}>Account Details</Text>
+        <View style={styles.infoCard}>
+          {infoRows.map((r, i) => (
+            <View key={r.label}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{r.label}</Text>
+                <Text style={styles.infoValue}>{r.value}</Text>
+              </View>
+              {i < infoRows.length - 1 && <View style={commonStyles.divider} />}
+            </View>
+          ))}
+        </View>
+
+        {/* Danger zone */}
+        <View style={styles.dangerCard}>
+          <Text style={styles.dangerTitle}>Account Actions</Text>
+          <TouchableOpacity
+            style={styles.dangerBtn}
+            onPress={() =>
+              Alert.alert(
+                'Freeze Account',
+                'Are you sure you want to freeze this account?',
+                [
+                  {text: 'Cancel', style: 'cancel'},
+                  {text: 'Freeze', style: 'destructive', onPress: () => {}},
+                ],
+              )
+            }
+            activeOpacity={0.8}>
+            <Text style={styles.dangerBtnText}>❄️ Freeze Account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomSpacer} />
       </View>
-
-      {/* Account Owner */}
-      <Text style={commonStyles.sectionTitle}>Account Holder</Text>
-      <View style={commonStyles.card}>
-        <DetailRow label="Full Name" value={accountDetails.name} />
-        <DetailRow label="Email" value={accountDetails.email} />
-      </View>
-
-      {/* Actions */}
-      <Text style={commonStyles.sectionTitle}>Account Actions</Text>
-      <View style={styles.actionsGrid}>
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => navigation.navigate('Transactions', {accountId})}
-          activeOpacity={0.75}>
-          <Text style={styles.actionCardIcon}>↕️</Text>
-          <Text style={styles.actionCardLabel}>Transactions</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => navigation.navigate('SavingsGoals', {accountId})}
-          activeOpacity={0.75}>
-          <Text style={styles.actionCardIcon}>🎯</Text>
-          <Text style={styles.actionCardLabel}>Savings Goals</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => navigation.navigate('Loans', {accountId})}
-          activeOpacity={0.75}>
-          <Text style={styles.actionCardIcon}>🏦</Text>
-          <Text style={styles.actionCardLabel}>Loans</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.lastUpdatedText}>
-        Last updated: {new Date(accountDetails.lastUpdated).toLocaleString()}
-      </Text>
-      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  errorEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
+  root: {flex: 1, backgroundColor: colors.background},
+  loadingText: {marginTop: 12, fontSize: 15, color: colors.textSecondary},
+  errorEmoji: {fontSize: 40, marginBottom: 12},
   errorTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 6,
   },
-  errorMessage: {
-    fontSize: 15,
+  errorMsg: {
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
+    marginBottom: 20,
   },
-  actionBtn: {
-    minWidth: 200,
+  retryBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  retryBtnText: {color: colors.white, fontWeight: '600', fontSize: 15},
+
+  heroBanner: {
+    backgroundColor: colors.gradientStart,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 32,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
-  backLink: {
-    paddingVertical: 8,
-  },
-  backLinkText: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  balanceCard: {
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  balanceCardLabel: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
+  heroLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  balanceCardAmount: {
-    fontSize: 36,
+  heroBalance: {
+    fontSize: 38,
     fontWeight: '700',
     color: colors.white,
-    letterSpacing: -0.5,
-    marginBottom: 16,
+    letterSpacing: -1.5,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 6,
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  statusBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  accountTypeLabel: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
+  heroAccountType: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
+    marginBottom: 4,
   },
-  detailRow: {
+  heroAccountNum: {fontSize: 13, color: 'rgba(255,255,255,0.55)'},
+  statusBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  statusBadgeText: {fontSize: 12, color: colors.white, fontWeight: '600'},
+  decor1: {
+    position: 'absolute',
+    right: -50,
+    top: -50,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  decor2: {
+    position: 'absolute',
+    right: 30,
+    bottom: -70,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+  bodyPad: {paddingHorizontal: 20, paddingTop: 20},
+
+  actionRow: {flexDirection: 'row', gap: 10, marginBottom: 28},
+  actionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  actionIcon: {fontSize: 18},
+  actionLabel: {fontSize: 11, fontWeight: '600', color: colors.textSecondary},
+
+  infoCard: {
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    paddingHorizontal: 16,
   },
-  detailLabel: {
+  infoLabel: {fontSize: 14, color: colors.textSecondary},
+  infoValue: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    flex: 1,
-  },
-  detailValue: {
-    fontSize: 15,
-    color: colors.textPrimary,
     fontWeight: '600',
+    color: colors.textPrimary,
+    maxWidth: '55%',
     textAlign: 'right',
-    flex: 1,
   },
-  interestRateValue: {
-    color: colors.secondary,
+
+  holderRow: {flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12},
+  holderAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    gap: 12,
+  holderAvatarText: {fontSize: 20, fontWeight: '700', color: colors.primary},
+  holderName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  holderEmail: {fontSize: 13, color: colors.textSecondary},
+
+  dangerCard: {
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
     marginBottom: 24,
   },
-  actionCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  actionCardIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  actionCardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  dangerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
-    textAlign: 'center',
+    marginBottom: 12,
   },
-  lastUpdatedText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginBottom: 8,
+  dangerBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  bottomSpacer: {
-    height: 32,
-  },
+  dangerBtnText: {fontSize: 14, color: colors.error, fontWeight: '600'},
+
+  bottomSpacer: {height: 40},
 });
 
 export default AccountDetailsScreen;

@@ -17,7 +17,7 @@ import {useAuth} from '../context/AuthContext';
 import type {RootStackParamList} from '../navigation/AppNavigator';
 import {colors, commonStyles} from '../styles/commonStyles';
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<
+type RegisterNavProp = NativeStackNavigationProp<
   RootStackParamList,
   'Register'
 >;
@@ -28,44 +28,41 @@ const RegisterScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [firstFocus, setFirstFocus] = useState(false);
+  const [lastFocus, setLastFocus] = useState(false);
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [passFocus, setPassFocus] = useState(false);
+  const [confirmFocus, setConfirmFocus] = useState(false);
+
   const {register, isLoading} = useAuth();
-  const navigation = useNavigation<RegisterScreenNavigationProp>();
+  const navigation = useNavigation<RegisterNavProp>();
 
   const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
-  const confirmPasswordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
     setError('');
-
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
       setError('Please fill in all fields.');
       return;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Please enter a valid email address.');
       return;
     }
-
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      setError('Password must be at least 8 characters.');
       return;
     }
-
-    if (!/(?=.*[a-z])(?=.*[A-Z])|(?=.*\d)/.test(password)) {
-      setError('Password must contain letters and numbers.');
-      return;
-    }
-
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
-
     try {
       await register({
         firstName: firstName.trim(),
@@ -75,133 +72,212 @@ const RegisterScreen = () => {
         confirmPassword,
       });
       Alert.alert(
-        'Success',
-        'Account created successfully! Welcome to FinovaBank.',
+        'Welcome to FinovaBank!',
+        'Your account has been created successfully.',
       );
-    } catch (apiError: unknown) {
-      console.error('Registration failed:', apiError);
-      const err = apiError as {
-        response?: {data?: {error?: {message?: string}; message?: string}};
+    } catch (err: unknown) {
+      const e = err as {
+        response?: {data?: {message?: string}};
         message?: string;
       };
-      const errorMessage =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        err.message ||
-        'Registration failed. Please try again.';
-      setError(errorMessage);
+      setError(
+        e.response?.data?.message ||
+          e.message ||
+          'Registration failed. Please try again.',
+      );
     }
   };
+
+  // password strength hints
+  const hints = [
+    {label: '8+ characters', met: password.length >= 8},
+    {label: 'Letters & numbers', met: /(?=.*[a-zA-Z])(?=.*\d)/.test(password)},
+    {
+      label: 'Passwords match',
+      met: !!confirmPassword && password === confirmPassword,
+    },
+  ];
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.keyboardView}>
+      style={styles.root}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Create Account</Text>
-          <Text style={styles.headerSubtitle}>
-            Join FinovaBank and take control of your finances
-          </Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoBox}>
+            <Text style={styles.logoLetter}>F</Text>
+          </View>
+          <Text style={styles.headerTitle}>Create your account</Text>
+          <Text style={styles.headerSub}>Join 2.4M+ FinovaBank customers</Text>
         </View>
 
-        <View style={styles.formContainer}>
+        {/* Form card */}
+        <View style={styles.formCard}>
           {error ? (
             <View style={commonStyles.errorContainer}>
               <Text style={commonStyles.errorText}>{error}</Text>
             </View>
           ) : null}
 
+          {/* Name row */}
           <View style={styles.nameRow}>
-            <View style={styles.nameField}>
-              <Text style={styles.inputLabel}>First Name</Text>
+            <View style={styles.halfField}>
+              <Text style={styles.fieldLabel}>First Name</Text>
               <TextInput
-                style={[commonStyles.input, styles.halfInput]}
-                placeholder="John"
+                style={[
+                  commonStyles.input,
+                  firstFocus && commonStyles.inputFocused,
+                  {marginBottom: 0},
+                ]}
+                placeholder="Jane"
+                placeholderTextColor={colors.textTertiary}
                 value={firstName}
                 onChangeText={setFirstName}
-                placeholderTextColor={colors.textTertiary}
-                editable={!isLoading}
                 autoCapitalize="words"
                 returnKeyType="next"
                 onSubmitEditing={() => lastNameRef.current?.focus()}
+                editable={!isLoading}
+                onFocus={() => setFirstFocus(true)}
+                onBlur={() => setFirstFocus(false)}
               />
             </View>
-            <View style={styles.nameField}>
-              <Text style={styles.inputLabel}>Last Name</Text>
+            <View style={styles.halfField}>
+              <Text style={styles.fieldLabel}>Last Name</Text>
               <TextInput
                 ref={lastNameRef}
-                style={[commonStyles.input, styles.halfInput]}
+                style={[
+                  commonStyles.input,
+                  lastFocus && commonStyles.inputFocused,
+                  {marginBottom: 0},
+                ]}
                 placeholder="Doe"
+                placeholderTextColor={colors.textTertiary}
                 value={lastName}
                 onChangeText={setLastName}
-                placeholderTextColor={colors.textTertiary}
-                editable={!isLoading}
                 autoCapitalize="words"
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
+                editable={!isLoading}
+                onFocus={() => setLastFocus(true)}
+                onBlur={() => setLastFocus(false)}
               />
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>Email Address</Text>
-          <TextInput
-            ref={emailRef}
-            style={commonStyles.input}
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-            placeholderTextColor={colors.textTertiary}
-            editable={!isLoading}
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
+          {/* Email */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Email address</Text>
+            <TextInput
+              ref={emailRef}
+              style={[
+                commonStyles.input,
+                emailFocus && commonStyles.inputFocused,
+                {marginBottom: 0},
+              ]}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              editable={!isLoading}
+              onFocus={() => setEmailFocus(true)}
+              onBlur={() => setEmailFocus(false)}
+            />
+          </View>
 
-          <Text style={styles.inputLabel}>Password</Text>
-          <TextInput
-            ref={passwordRef}
-            style={commonStyles.input}
-            placeholder="Min. 8 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholderTextColor={colors.textTertiary}
-            editable={!isLoading}
-            returnKeyType="next"
-            onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-          />
+          {/* Password */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Password</Text>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                ref={passwordRef}
+                style={[
+                  commonStyles.input,
+                  passFocus && commonStyles.inputFocused,
+                  {marginBottom: 0, paddingRight: 48},
+                ]}
+                placeholder="Min. 8 characters"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPass}
+                returnKeyType="next"
+                onSubmitEditing={() => confirmRef.current?.focus()}
+                editable={!isLoading}
+                onFocus={() => setPassFocus(true)}
+                onBlur={() => setPassFocus(false)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPass(v => !v)}>
+                <Text style={styles.eyeIcon}>{showPass ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <Text style={styles.inputLabel}>Confirm Password</Text>
-          <TextInput
-            ref={confirmPasswordRef}
-            style={commonStyles.input}
-            placeholder="Re-enter your password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            placeholderTextColor={colors.textTertiary}
-            editable={!isLoading}
-            returnKeyType="done"
-            onSubmitEditing={handleRegister}
-          />
+          {/* Confirm password */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Confirm Password</Text>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                ref={confirmRef}
+                style={[
+                  commonStyles.input,
+                  confirmFocus && commonStyles.inputFocused,
+                  {marginBottom: 0, paddingRight: 48},
+                ]}
+                placeholder="Re-enter password"
+                placeholderTextColor={colors.textTertiary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirm}
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
+                editable={!isLoading}
+                onFocus={() => setConfirmFocus(true)}
+                onBlur={() => setConfirmFocus(false)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowConfirm(v => !v)}>
+                <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <Text style={styles.passwordHint}>
-            Use 8+ characters with a mix of letters and numbers
-          </Text>
+          {/* Hints */}
+          <View style={styles.hintRow}>
+            {hints.map(h => (
+              <View key={h.label} style={styles.hintItem}>
+                <Text
+                  style={[
+                    styles.hintDot,
+                    {color: h.met ? colors.success : colors.textDisabled},
+                  ]}>
+                  ●
+                </Text>
+                <Text
+                  style={[
+                    styles.hintText,
+                    {color: h.met ? colors.success : colors.textTertiary},
+                  ]}>
+                  {h.label}
+                </Text>
+              </View>
+            ))}
+          </View>
 
+          {/* Submit */}
           <TouchableOpacity
-            style={[
-              commonStyles.button,
-              styles.registerButton,
-              isLoading && styles.buttonDisabled,
-            ]}
+            style={[styles.submitBtn, isLoading && styles.btnDisabled]}
             onPress={handleRegister}
             disabled={isLoading}
             activeOpacity={0.85}>
@@ -213,15 +289,22 @@ const RegisterScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.buttonDisabled]}
-            onPress={() => navigation.navigate('Login')}
+            style={styles.signinRow}
+            onPress={() => navigation.goBack()}
             disabled={isLoading}
             activeOpacity={0.7}>
-            <Text style={styles.loginText}>
+            <Text style={styles.signinText}>
               Already have an account?{' '}
-              <Text style={styles.loginTextBold}>Sign in</Text>
+              <Text style={styles.signinLink}>Sign in</Text>
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Security note */}
+        <View style={styles.securityNote}>
+          <Text style={styles.securityText}>
+            🔒 Your data is encrypted with 256-bit SSL and stored securely.
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -229,87 +312,130 @@ const RegisterScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
+  root: {flex: 1, backgroundColor: colors.background},
+  scroll: {flexGrow: 1, paddingBottom: 32},
+
+  header: {
+    alignItems: 'center',
+    paddingTop: 40,
+    paddingBottom: 28,
     paddingHorizontal: 24,
-    paddingVertical: 32,
   },
-  headerContainer: {
-    marginBottom: 28,
+  logoBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+      },
+      android: {elevation: 6},
+    }),
   },
+  logoLetter: {fontSize: 28, fontWeight: '800', color: colors.white},
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+    marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  formContainer: {
-    backgroundColor: colors.white,
-    borderRadius: 24,
+  headerSub: {fontSize: 14, color: colors.textSecondary},
+
+  formCard: {
+    marginHorizontal: 20,
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 20,
     padding: 24,
-    shadowColor: colors.shadow,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: {elevation: 4},
+    }),
   },
-  nameRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 0,
-  },
-  nameField: {
-    flex: 1,
-  },
-  halfInput: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    fontSize: 14,
+
+  nameRow: {flexDirection: 'row', gap: 10, marginBottom: 0},
+  halfField: {flex: 1},
+  fieldGroup: {marginBottom: 6, marginTop: 10},
+  fieldLabel: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 6,
   },
-  passwordHint: {
+
+  passwordWrap: {position: 'relative'},
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  eyeIcon: {fontSize: 16},
+
+  hintRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  hintItem: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  hintDot: {fontSize: 8},
+  hintText: {fontSize: 12},
+
+  submitBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+      },
+      android: {elevation: 5},
+    }),
+  },
+  btnDisabled: {opacity: 0.6},
+
+  signinRow: {alignItems: 'center', paddingVertical: 16},
+  signinText: {fontSize: 14, color: colors.textSecondary},
+  signinLink: {color: colors.primary, fontWeight: '600'},
+
+  securityNote: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    backgroundColor: colors.backgroundWhite,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  securityText: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: -6,
-    marginBottom: 20,
+    textAlign: 'center',
     lineHeight: 18,
-  },
-  registerButton: {
-    borderRadius: 14,
-    shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  buttonDisabled: {
-    opacity: 0.65,
-  },
-  loginButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  loginText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  loginTextBold: {
-    color: colors.primary,
-    fontWeight: '600',
   },
 });
 
