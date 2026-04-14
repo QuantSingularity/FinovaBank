@@ -70,7 +70,7 @@ const Layout: React.FC = () => {
   };
 
   const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/" },
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
     { text: "Transactions", icon: <PaymentIcon />, path: "/transactions" },
     { text: "Savings Goals", icon: <SavingsIcon />, path: "/savings" },
     { text: "Loans", icon: <CreditCardIcon />, path: "/loans" },

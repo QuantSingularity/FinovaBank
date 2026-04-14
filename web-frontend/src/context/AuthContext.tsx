@@ -42,42 +42,28 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Demo user — allows the app to open directly on the Homepage without login
+const DEMO_USER: User = {
+  id: "demo-001",
+  name: "Demo User",
+  email: "demo@finovabank.com",
+  role: "USER",
+  createdAt: new Date().toISOString(),
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(DEMO_USER);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const storedUser = sessionStorage.getItem("user");
-        const token = sessionStorage.getItem("token");
-
-        if (storedUser && token) {
-          try {
-            const response = await authAPI.verifyToken(token);
-            if (response.data.valid) {
-              setUser(JSON.parse(storedUser));
-              setIsAuthenticated(true);
-            } else {
-              handleClearAuth();
-            }
-          } catch {
-            // Network error: keep existing session rather than logging out
-            setUser(JSON.parse(storedUser));
-            setIsAuthenticated(true);
-          }
-        }
-      } catch {
-        handleClearAuth();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+    // Seed sessionStorage so any token-dependent logic finds valid data
+    if (!sessionStorage.getItem("token")) {
+      sessionStorage.setItem("token", "demo-token");
+      sessionStorage.setItem("user", JSON.stringify(DEMO_USER));
+    }
   }, []);
 
   const handleClearAuth = () => {
@@ -101,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData as User);
       setIsAuthenticated(true);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||
@@ -115,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     handleClearAuth();
-    navigate("/login");
+    navigate("/home");
   };
 
   const register = async (name: string, email: string, password: string) => {
@@ -130,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData as User);
       setIsAuthenticated(true);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err: any) {
       const msg =
         err.response?.data?.message || "Registration failed. Please try again.";

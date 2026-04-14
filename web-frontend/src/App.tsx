@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -7,6 +7,7 @@ import { AuthProvider } from "./context/AuthContext";
 import AccountDetails from "./pages/AccountDetails";
 import Dashboard from "./pages/Dashboard";
 import ForgotPassword from "./pages/ForgotPassword";
+import HomePage from "./pages/HomePage";
 import Loans from "./pages/Loans";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -25,11 +26,15 @@ function App() {
           sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
         >
           <Routes>
-            <Route path="/login" element={<Login />} />
+            {/* Public landing page */}
+            <Route path="/home" element={<HomePage />} />
+            {/* Redirect root and /login to the public homepage */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/login" element={<Navigate to="/home" replace />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Layout />
