@@ -77,7 +77,7 @@ const RegisterScreen = () => {
         err.response?.data?.error?.message ??
           err.response?.data?.message ??
           err.message ??
-          "Registration failed. Please try again."
+          "Registration failed. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -229,8 +229,8 @@ const RegisterScreen = () => {
                           ? i === 0
                             ? colors.error
                             : i === 1
-                            ? colors.warning
-                            : colors.success
+                              ? colors.warning
+                              : colors.success
                           : colors.border,
                     },
                   ]}
@@ -240,8 +240,8 @@ const RegisterScreen = () => {
                 {password.length < 6
                   ? "Weak"
                   : password.length < 12
-                  ? "Good"
-                  : "Strong"}
+                    ? "Good"
+                    : "Strong"}
               </Text>
             </View>
           )}

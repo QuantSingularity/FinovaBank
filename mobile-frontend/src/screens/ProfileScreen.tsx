@@ -64,7 +64,7 @@ const ProfileScreen = () => {
       setProfileError(
         err.response?.data?.message ??
           err.message ??
-          "Failed to update profile."
+          "Failed to update profile.",
       );
     } finally {
       setSavingProfile(false);
@@ -105,7 +105,7 @@ const ProfileScreen = () => {
       setPasswordError(
         err.response?.data?.message ??
           err.message ??
-          "Failed to change password."
+          "Failed to change password.",
       );
     } finally {
       setSavingPassword(false);
@@ -151,8 +151,8 @@ const ProfileScreen = () => {
               {t === "profile"
                 ? "👤 Profile"
                 : t === "security"
-                ? "🔒 Security"
-                : "ℹ️ About"}
+                  ? "🔒 Security"
+                  : "ℹ️ About"}
             </Text>
           </TouchableOpacity>
         ))}

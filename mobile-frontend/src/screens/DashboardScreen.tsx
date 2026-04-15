@@ -58,7 +58,9 @@ const DashboardScreen = () => {
         message?: string;
       };
       setError(
-        e.response?.data?.message ?? e.message ?? "Failed to load account data."
+        e.response?.data?.message ??
+          e.message ??
+          "Failed to load account data.",
       );
     } finally {
       setLoading(false);
@@ -166,7 +168,7 @@ const DashboardScreen = () => {
               onPress={() =>
                 navigation.navigate(
                   "Transfer",
-                  primaryAccount ? { accountId: primaryAccount.id } : {}
+                  primaryAccount ? { accountId: primaryAccount.id } : {},
                 )
               }
               activeOpacity={0.8}

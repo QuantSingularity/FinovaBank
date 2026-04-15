@@ -56,7 +56,7 @@ const LoginScreen = () => {
         err.response?.data?.error?.message ??
           err.response?.data?.message ??
           err.message ??
-          "Login failed. Please check your credentials."
+          "Login failed. Please check your credentials.",
       );
     } finally {
       setIsSubmitting(false);

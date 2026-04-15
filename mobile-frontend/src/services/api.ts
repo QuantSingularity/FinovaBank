@@ -30,7 +30,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error: AxiosError) => Promise.reject(error)
+  (error: AxiosError) => Promise.reject(error),
 );
 
 // ── Response interceptor: handle 401 / network errors ────────────────────
@@ -50,7 +50,7 @@ apiClient.interceptors.response.use(
         console.warn("[API] Network error:", error.message);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export const getAccountTransactions = (
     type?: string;
     limit?: number;
     offset?: number;
-  }
+  },
 ) => apiClient.get(`/accounts/${accountId}/transactions`, { params });
 
 // ── Loan Management ───────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ export const deleteSavingsGoal = (goalId: string) =>
 // Bug fix: was "contributeTosavingsGoal" — corrected casing
 export const contributeToSavingsGoal = (
   goalId: string,
-  data: { amount: number }
+  data: { amount: number },
 ) => apiClient.post(`/savings/${goalId}/contribute`, data);
 
 // ── Authentication ────────────────────────────────────────────────────────

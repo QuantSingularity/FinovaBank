@@ -106,14 +106,14 @@ const TransactionsScreen = () => {
         setError(
           err.response?.data?.message ??
             err.message ??
-            "Failed to load transactions."
+            "Failed to load transactions.",
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [accountId]
+    [accountId],
   );
 
   useEffect(() => {

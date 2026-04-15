@@ -107,14 +107,14 @@ const LoansScreen = () => {
           message?: string;
         };
         setError(
-          err.response?.data?.message ?? err.message ?? "Failed to load loans."
+          err.response?.data?.message ?? err.message ?? "Failed to load loans.",
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [accountId]
+    [accountId],
   );
 
   useEffect(() => {
@@ -147,7 +147,7 @@ const LoansScreen = () => {
     const selectedLoanType = loanTypes.find((t) => t.id === selectedType);
     if (selectedLoanType && amountNum > selectedLoanType.maxAmount) {
       setFormError(
-        `Maximum amount for this loan type is $${selectedLoanType.maxAmount.toLocaleString()}.`
+        `Maximum amount for this loan type is $${selectedLoanType.maxAmount.toLocaleString()}.`,
       );
       return;
     }
@@ -163,7 +163,7 @@ const LoansScreen = () => {
       Alert.alert(
         "Application Submitted",
         "Your loan application has been submitted for review.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       setScreen("list");
       setAmount("");
@@ -178,7 +178,7 @@ const LoansScreen = () => {
       setFormError(
         err.response?.data?.message ??
           err.message ??
-          "Failed to submit application."
+          "Failed to submit application.",
       );
     } finally {
       setSubmitting(false);
@@ -471,7 +471,7 @@ const LoansScreen = () => {
                           {
                             width: `${Math.max(
                               5,
-                              100 - (item.remainingBalance / item.amount) * 100
+                              100 - (item.remainingBalance / item.amount) * 100,
                             )}%` as any,
                           },
                         ]}

@@ -55,7 +55,7 @@ const TransactionDetailsScreen = () => {
   const { transactionId, transaction: passedTx } = route.params;
 
   const [tx, setTx] = useState<TransactionData | null>(
-    (passedTx as TransactionData) ?? null
+    (passedTx as TransactionData) ?? null,
   );
   const [loading, setLoading] = useState(!passedTx);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +74,7 @@ const TransactionDetailsScreen = () => {
       setError(
         err.response?.data?.message ??
           err.message ??
-          "Failed to load transaction."
+          "Failed to load transaction.",
       );
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ const TransactionDetailsScreen = () => {
 
   const isCredit = tx.type === "CREDIT";
   const formattedAmount = `${isCredit ? "+" : "-"}$${Math.abs(
-    tx.amount
+    tx.amount,
   ).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -189,8 +189,8 @@ const TransactionDetailsScreen = () => {
                     tx.status === "COMPLETED"
                       ? colors.successLight
                       : tx.status === "PENDING"
-                      ? colors.warningLight
-                      : colors.surface,
+                        ? colors.warningLight
+                        : colors.surface,
                 },
               ]}
             >
@@ -202,8 +202,8 @@ const TransactionDetailsScreen = () => {
                       tx.status === "COMPLETED"
                         ? colors.success
                         : tx.status === "PENDING"
-                        ? colors.warning
-                        : colors.textSecondary,
+                          ? colors.warning
+                          : colors.textSecondary,
                   },
                 ]}
               >

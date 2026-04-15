@@ -107,14 +107,14 @@ const AccountDetailsScreen = () => {
         setError(
           err.response?.data?.message ??
             err.message ??
-            "Failed to load account."
+            "Failed to load account.",
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [accountId]
+    [accountId],
   );
 
   useEffect(() => {

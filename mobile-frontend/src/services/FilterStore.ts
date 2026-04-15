@@ -31,7 +31,7 @@ export const FilterStore = {
 
   call(
     key: string,
-    filter: { startDate: string; endDate: string; type?: string }
+    filter: { startDate: string; endDate: string; type?: string },
   ) {
     const cb = _store.get(key);
     if (cb) {

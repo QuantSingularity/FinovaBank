@@ -85,7 +85,7 @@ const TransferScreen = () => {
       Alert.alert(
         "Transfer Submitted",
         `$${amt.toFixed(2)} transfer has been submitted successfully.`,
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        [{ text: "OK", onPress: () => navigation.goBack() }],
       );
     } catch (e: unknown) {
       const err = e as {
@@ -95,7 +95,7 @@ const TransferScreen = () => {
       setError(
         err.response?.data?.message ??
           err.message ??
-          "Transfer failed. Please try again."
+          "Transfer failed. Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -184,8 +184,8 @@ const TransferScreen = () => {
             {transferType === "internal"
               ? "Destination Account Number"
               : transferType === "external"
-              ? "Recipient Name or Account"
-              : "Biller / Company Name"}
+                ? "Recipient Name or Account"
+                : "Biller / Company Name"}
           </Text>
           <TextInput
             style={commonStyles.input}
@@ -195,8 +195,8 @@ const TransferScreen = () => {
               transferType === "internal"
                 ? "e.g. 1234567890"
                 : transferType === "external"
-                ? "e.g. John Smith"
-                : "e.g. Electric Company"
+                  ? "e.g. John Smith"
+                  : "e.g. Electric Company"
             }
             placeholderTextColor={colors.textTertiary}
             editable={!submitting}

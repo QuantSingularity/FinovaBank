@@ -81,14 +81,14 @@ const SavingsGoalsScreen = () => {
         setError(
           err.response?.data?.message ??
             err.message ??
-            "Failed to load savings goals."
+            "Failed to load savings goals.",
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [accountId]
+    [accountId],
   );
 
   useEffect(() => {
@@ -131,7 +131,7 @@ const SavingsGoalsScreen = () => {
       });
       Alert.alert(
         "Goal Created",
-        `"${goalName.trim()}" savings goal has been created!`
+        `"${goalName.trim()}" savings goal has been created!`,
       );
       setMode("list");
       setGoalName("");
@@ -145,7 +145,7 @@ const SavingsGoalsScreen = () => {
         message?: string;
       };
       setFormError(
-        err.response?.data?.message ?? err.message ?? "Failed to create goal."
+        err.response?.data?.message ?? err.message ?? "Failed to create goal.",
       );
     } finally {
       setSubmitting(false);
@@ -169,7 +169,7 @@ const SavingsGoalsScreen = () => {
         goals.find((g) => g.id === selectedGoalId)?.name ?? "goal";
       Alert.alert(
         "Contribution Added",
-        `$${amt.toFixed(2)} added to "${goalName}".`
+        `$${amt.toFixed(2)} added to "${goalName}".`,
       );
       setMode("list");
       setContribution("");
@@ -183,7 +183,7 @@ const SavingsGoalsScreen = () => {
       setFormError(
         err.response?.data?.message ??
           err.message ??
-          "Failed to add contribution."
+          "Failed to add contribution.",
       );
     } finally {
       setSubmitting(false);
@@ -210,12 +210,12 @@ const SavingsGoalsScreen = () => {
               };
               Alert.alert(
                 "Error",
-                err.response?.data?.message ?? "Failed to delete goal."
+                err.response?.data?.message ?? "Failed to delete goal.",
               );
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -393,7 +393,7 @@ const SavingsGoalsScreen = () => {
                       width: `${Math.min(
                         100,
                         goal.progress ??
-                          (goal.currentAmount / goal.targetAmount) * 100
+                          (goal.currentAmount / goal.targetAmount) * 100,
                       )}%` as any,
                     },
                   ]}
@@ -402,7 +402,7 @@ const SavingsGoalsScreen = () => {
               <Text style={styles.goalMiniPercent}>
                 {Math.round(
                   goal.progress ??
-                    (goal.currentAmount / goal.targetAmount) * 100
+                    (goal.currentAmount / goal.targetAmount) * 100,
                 )}
                 % complete
               </Text>
@@ -527,12 +527,12 @@ const SavingsGoalsScreen = () => {
             const pct = Math.min(
               100,
               Math.round(
-                item.progress ?? (item.currentAmount / item.targetAmount) * 100
-              )
+                item.progress ?? (item.currentAmount / item.targetAmount) * 100,
+              ),
             );
             const remaining = Math.max(
               0,
-              item.targetAmount - item.currentAmount
+              item.targetAmount - item.currentAmount,
             );
             return (
               <View style={styles.goalCard}>

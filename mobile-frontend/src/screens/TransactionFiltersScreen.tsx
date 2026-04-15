@@ -50,10 +50,10 @@ const TransactionFiltersScreen = () => {
   const [selectedRange, setSelectedRange] = useState<number | null>(null);
   const [txType, setTxType] = useState(currentFilter?.type ?? "");
   const [startDate, setStartDate] = useState(
-    currentFilter?.startDate ?? daysAgo(30)
+    currentFilter?.startDate ?? daysAgo(30),
   );
   const [endDate, setEndDate] = useState(
-    currentFilter?.endDate ?? fmt(new Date())
+    currentFilter?.endDate ?? fmt(new Date()),
   );
   const [dateError, setDateError] = useState("");
 

@@ -86,7 +86,7 @@ const NotificationsScreen = () => {
 
   const markRead = (id: string) => {
     setNotifications((ns) =>
-      ns.map((n) => (n.id === id ? { ...n, read: true } : n))
+      ns.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
   };
 

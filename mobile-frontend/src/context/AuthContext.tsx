@@ -102,7 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await loginUser(credentials);
       await persistAuth(response.data);
     },
-    [persistAuth]
+    [persistAuth],
   );
 
   const logout = useCallback(async () => {
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await registerUser(newUserData);
       await persistAuth(response.data);
     },
-    [persistAuth]
+    [persistAuth],
   );
 
   const updateUserData = useCallback((data: Partial<UserData>) => {
