@@ -1,4 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+/**
+ * AuthContext — FinovaBank Expo Edition
+ *
+ * Fixes vs. original:
+ * 1. Uses expo-secure-store (OS keychain) instead of AsyncStorage for tokens.
+ * 2. isLoading no longer set to true during login/register — avoids
+ *    full-screen spinner for interactive actions; errors surface properly.
+ * 3. logout() always clears local state even if the server call fails.
+ * 4. useAuth() throws a descriptive error if used outside provider.
+ */
+
+import * as SecureStore from "expo-secure-store";
 import React, {
   createContext,
   type ReactNode,
@@ -6,7 +17,7 @@ import React, {
   useContext,
   useEffect,
   useState,
-} from 'react';
+} from "react";
 import {
   type AuthResponse,
   type LoginCredentials,
@@ -14,159 +25,130 @@ import {
   logoutUser,
   type RegisterData,
   registerUser,
-} from '../services/api';
+} from "../services/api";
+
+interface UserData {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
 
 interface AuthContextData {
   userToken: string | null;
-  userData: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  } | null;
+  userData: UserData | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
+  updateUserData: (data: Partial<UserData>) => void;
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+const AuthContext = createContext<AuthContextData | null>(null);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+const TOKEN_KEY = "finovabank_user_token";
+const USER_KEY = "finovabank_user_data";
 
-const TOKEN_STORAGE_KEY = 'finovabank_user_token';
-const USER_DATA_STORAGE_KEY = 'finovabank_user_data';
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<AuthResponse['user'] | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  // isLoading is ONLY true during the initial bootstrap
   const [isLoading, setIsLoading] = useState(true);
 
+  // ── Bootstrap: restore session on app start ────────────────────────────
   useEffect(() => {
-    const bootstrapAsync = async () => {
-      setIsLoading(true);
+    const bootstrap = async () => {
       try {
-        const [token, userDataString] = await Promise.all([
-          AsyncStorage.getItem(TOKEN_STORAGE_KEY),
-          AsyncStorage.getItem(USER_DATA_STORAGE_KEY),
+        const [token, userStr] = await Promise.all([
+          SecureStore.getItemAsync(TOKEN_KEY),
+          SecureStore.getItemAsync(USER_KEY),
         ]);
-
-        if (token) {
-          setUserToken(token);
-        }
-
-        if (userDataString) {
-          setUserData(JSON.parse(userDataString));
-        }
+        if (token) setUserToken(token);
+        if (userStr) setUserData(JSON.parse(userStr) as UserData);
       } catch (e) {
-        console.error('Failed to restore authentication state', e);
+        console.warn("[Auth] Failed to restore session:", e);
       } finally {
         setIsLoading(false);
       }
     };
-
-    bootstrapAsync();
+    bootstrap();
   }, []);
 
-  const storeAuthData = useCallback(async (response: AuthResponse) => {
-    try {
-      await AsyncStorage.multiSet([
-        [TOKEN_STORAGE_KEY, response.token],
-        [USER_DATA_STORAGE_KEY, JSON.stringify(response.user)],
-      ]);
-      setUserToken(response.token);
-      setUserData(response.user);
-    } catch (error) {
-      console.error('Failed to store auth data', error);
-      throw new Error('Failed to store authentication data');
-    }
+  // ── Helpers ────────────────────────────────────────────────────────────
+  const persistAuth = useCallback(async (response: AuthResponse) => {
+    await Promise.all([
+      SecureStore.setItemAsync(TOKEN_KEY, response.token),
+      SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.user)),
+    ]);
+    setUserToken(response.token);
+    setUserData(response.user);
   }, []);
 
-  const clearAuthData = useCallback(async () => {
-    try {
-      await AsyncStorage.multiRemove([
-        TOKEN_STORAGE_KEY,
-        USER_DATA_STORAGE_KEY,
-      ]);
-      setUserToken(null);
-      setUserData(null);
-    } catch (error) {
-      console.error('Failed to clear auth data', error);
-      throw new Error('Failed to clear authentication data');
-    }
+  const clearAuth = useCallback(async () => {
+    await Promise.all([
+      SecureStore.deleteItemAsync(TOKEN_KEY),
+      SecureStore.deleteItemAsync(USER_KEY),
+    ]);
+    setUserToken(null);
+    setUserData(null);
   }, []);
 
+  // ── Public actions ─────────────────────────────────────────────────────
   const login = useCallback(
     async (credentials: LoginCredentials) => {
-      setIsLoading(true);
-      try {
-        const response = await loginUser(credentials);
-        await storeAuthData(response.data);
-      } catch (error) {
-        console.error('Login failed:', error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
+      const response = await loginUser(credentials);
+      await persistAuth(response.data);
     },
-    [storeAuthData],
+    [persistAuth]
   );
 
   const logout = useCallback(async () => {
-    setIsLoading(true);
     try {
-      if (userToken) {
-        await logoutUser();
-      }
-      await clearAuthData();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      await clearAuthData();
+      if (userToken) await logoutUser();
+    } catch {
+      // Ignore server errors — clear locally regardless
     } finally {
-      setIsLoading(false);
+      await clearAuth();
     }
-  }, [userToken, clearAuthData]);
+  }, [userToken, clearAuth]);
 
   const register = useCallback(
     async (newUserData: RegisterData) => {
-      setIsLoading(true);
-      try {
-        const response = await registerUser(newUserData);
-        await storeAuthData(response.data);
-      } catch (error) {
-        console.error('Registration failed:', error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
+      const response = await registerUser(newUserData);
+      await persistAuth(response.data);
     },
-    [storeAuthData],
+    [persistAuth]
   );
 
-  const authContextValue: AuthContextData = {
-    userToken,
-    userData,
-    isLoading,
-    isAuthenticated: !!userToken,
-    login,
-    logout,
-    register,
-  };
+  const updateUserData = useCallback((data: Partial<UserData>) => {
+    setUserData((prev) => (prev ? { ...prev, ...data } : null));
+  }, []);
 
   return (
-    <AuthContext.Provider value={authContextValue}>
+    <AuthContext.Provider
+      value={{
+        userToken,
+        userData,
+        isLoading,
+        isAuthenticated: !!userToken,
+        login,
+        logout,
+        register,
+        updateUserData,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextData => {
   const context = useContext(AuthContext);
-  if (!context || Object.keys(context).length === 0) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

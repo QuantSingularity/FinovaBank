@@ -1,9 +1,8 @@
 /**
- * App Configuration
- * This file contains environment-specific configuration for the mobile app
+ * App Configuration — Expo edition
+ * Uses EXPO_PUBLIC_ prefix so values are inlined at build time.
+ * Set these in your .env file (copy from .env.example).
  */
-
-declare const __DEV__: boolean;
 
 interface AppConfig {
   API_BASE_URL: string;
@@ -11,18 +10,12 @@ interface AppConfig {
   ENABLE_LOGGING: boolean;
 }
 
-const devConfig: AppConfig = {
-  API_BASE_URL: 'http://localhost:8080/api/v1',
-  API_TIMEOUT: 30000,
-  ENABLE_LOGGING: true,
+const Config: AppConfig = {
+  API_BASE_URL:
+    process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1",
+  API_TIMEOUT: Number(process.env.EXPO_PUBLIC_API_TIMEOUT ?? 30000),
+  // Log in dev builds only
+  ENABLE_LOGGING: __DEV__,
 };
-
-const prodConfig: AppConfig = {
-  API_BASE_URL: 'https://api.finovabank.com/api/v1',
-  API_TIMEOUT: 30000,
-  ENABLE_LOGGING: false,
-};
-
-const Config: AppConfig = __DEV__ ? devConfig : prodConfig;
 
 export default Config;

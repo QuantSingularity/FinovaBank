@@ -1,9 +1,8 @@
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import React, {useRef, useState} from 'react';
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,33 +11,27 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import {useAuth} from '../context/AuthContext';
-import type {RootStackParamList} from '../navigation/AppNavigator';
-import {colors, commonStyles} from '../styles/commonStyles';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../context/AuthContext";
+import type { AuthStackParamList } from "../navigation/AppNavigator";
+import { colors, commonStyles } from "../styles/commonStyles";
 
-type RegisterNavProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Register'
->;
+type RegisterNav = NativeStackNavigationProp<AuthStackParamList, "Register">;
 
 const RegisterScreen = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState('');
-  const [firstFocus, setFirstFocus] = useState(false);
-  const [lastFocus, setLastFocus] = useState(false);
-  const [emailFocus, setEmailFocus] = useState(false);
-  const [passFocus, setPassFocus] = useState(false);
-  const [confirmFocus, setConfirmFocus] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {register, isLoading} = useAuth();
-  const navigation = useNavigation<RegisterNavProp>();
+  const { register } = useAuth();
+  const navigation = useNavigation<RegisterNav>();
 
   const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
@@ -46,23 +39,25 @@ const RegisterScreen = () => {
   const confirmRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
-    setError('');
+    setError("");
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
-      setError('Please fill in all fields.');
+      setError("Please fill in all fields.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Please enter a valid email address.');
+      setError("Please enter a valid email address.");
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError("Password must be at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
+
+    setIsSubmitting(true);
     try {
       await register({
         firstName: firstName.trim(),
@@ -71,372 +66,269 @@ const RegisterScreen = () => {
         password,
         confirmPassword,
       });
-      Alert.alert(
-        'Welcome to FinovaBank!',
-        'Your account has been created successfully.',
-      );
-    } catch (err: unknown) {
-      const e = err as {
-        response?: {data?: {message?: string}};
+    } catch (apiError: unknown) {
+      const err = apiError as {
+        response?: {
+          data?: { error?: { message?: string }; message?: string };
+        };
         message?: string;
       };
       setError(
-        e.response?.data?.message ||
-          e.message ||
-          'Registration failed. Please try again.',
+        err.response?.data?.error?.message ??
+          err.response?.data?.message ??
+          err.message ??
+          "Registration failed. Please try again."
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // password strength hints
-  const hints = [
-    {label: '8+ characters', met: password.length >= 8},
-    {label: 'Letters & numbers', met: /(?=.*[a-zA-Z])(?=.*\d)/.test(password)},
-    {
-      label: 'Passwords match',
-      met: !!confirmPassword && password === confirmPassword,
-    },
-  ];
+  const Field = ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    inputRef,
+    nextRef,
+    keyboardType = "default",
+    autoCapitalize = "none",
+    autoComplete,
+    secureTextEntry,
+    onToggleSecure,
+    returnKeyType = "next",
+  }: {
+    label: string;
+    value: string;
+    onChangeText: (v: string) => void;
+    placeholder: string;
+    inputRef?: React.RefObject<TextInput>;
+    nextRef?: React.RefObject<TextInput>;
+    keyboardType?: "default" | "email-address";
+    autoCapitalize?: "none" | "words";
+    autoComplete?: string;
+    secureTextEntry?: boolean;
+    onToggleSecure?: () => void;
+    returnKeyType?: "next" | "done";
+  }) => (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={{ position: "relative" }}>
+        <TextInput
+          ref={inputRef}
+          style={[commonStyles.input, onToggleSecure && styles.inputWithEye]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          autoComplete={autoComplete as any}
+          secureTextEntry={secureTextEntry}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={() => nextRef?.current?.focus()}
+          editable={!isSubmitting}
+        />
+        {onToggleSecure && (
+          <TouchableOpacity
+            style={styles.eyeBtn}
+            onPress={onToggleSecure}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.eyeIcon}>{secureTextEntry ? "👁️" : "🙈"}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.root}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoLetter}>F</Text>
-          </View>
-          <Text style={styles.headerTitle}>Create your account</Text>
-          <Text style={styles.headerSub}>Join 2.4M+ FinovaBank customers</Text>
-        </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={commonStyles.titleText}>Create Account</Text>
+          <Text style={commonStyles.subtitleText}>
+            Join FinovaBank and take control of your finances
+          </Text>
 
-        {/* Form card */}
-        <View style={styles.formCard}>
           {error ? (
             <View style={commonStyles.errorContainer}>
               <Text style={commonStyles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Name row */}
           <View style={styles.nameRow}>
-            <View style={styles.halfField}>
-              <Text style={styles.fieldLabel}>First Name</Text>
-              <TextInput
-                style={[
-                  commonStyles.input,
-                  firstFocus && commonStyles.inputFocused,
-                  {marginBottom: 0},
-                ]}
-                placeholder="Jane"
-                placeholderTextColor={colors.textTertiary}
+            <View style={styles.nameField}>
+              <Field
+                label="First Name"
                 value={firstName}
                 onChangeText={setFirstName}
+                placeholder="Jane"
+                nextRef={lastNameRef}
                 autoCapitalize="words"
-                returnKeyType="next"
-                onSubmitEditing={() => lastNameRef.current?.focus()}
-                editable={!isLoading}
-                onFocus={() => setFirstFocus(true)}
-                onBlur={() => setFirstFocus(false)}
+                autoComplete="given-name"
               />
             </View>
-            <View style={styles.halfField}>
-              <Text style={styles.fieldLabel}>Last Name</Text>
-              <TextInput
-                ref={lastNameRef}
-                style={[
-                  commonStyles.input,
-                  lastFocus && commonStyles.inputFocused,
-                  {marginBottom: 0},
-                ]}
-                placeholder="Doe"
-                placeholderTextColor={colors.textTertiary}
+            <View style={styles.nameField}>
+              <Field
+                label="Last Name"
                 value={lastName}
                 onChangeText={setLastName}
+                placeholder="Smith"
+                inputRef={lastNameRef}
+                nextRef={emailRef}
                 autoCapitalize="words"
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                editable={!isLoading}
-                onFocus={() => setLastFocus(true)}
-                onBlur={() => setLastFocus(false)}
+                autoComplete="family-name"
               />
             </View>
           </View>
 
-          {/* Email */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Email address</Text>
-            <TextInput
-              ref={emailRef}
-              style={[
-                commonStyles.input,
-                emailFocus && commonStyles.inputFocused,
-                {marginBottom: 0},
-              ]}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              editable={!isLoading}
-              onFocus={() => setEmailFocus(true)}
-              onBlur={() => setEmailFocus(false)}
-            />
-          </View>
+          <Field
+            label="Email Address"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            inputRef={emailRef}
+            nextRef={passwordRef}
+            keyboardType="email-address"
+            autoComplete="email"
+          />
 
-          {/* Password */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={styles.passwordWrap}>
-              <TextInput
-                ref={passwordRef}
-                style={[
-                  commonStyles.input,
-                  passFocus && commonStyles.inputFocused,
-                  {marginBottom: 0, paddingRight: 48},
-                ]}
-                placeholder="Min. 8 characters"
-                placeholderTextColor={colors.textTertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPass}
-                returnKeyType="next"
-                onSubmitEditing={() => confirmRef.current?.focus()}
-                editable={!isLoading}
-                onFocus={() => setPassFocus(true)}
-                onBlur={() => setPassFocus(false)}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPass(v => !v)}>
-                <Text style={styles.eyeIcon}>{showPass ? '🙈' : '👁'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Field
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Min. 8 characters"
+            inputRef={passwordRef}
+            nextRef={confirmRef}
+            secureTextEntry={!showPass}
+            onToggleSecure={() => setShowPass((v) => !v)}
+            autoComplete="new-password"
+          />
 
-          {/* Confirm password */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Confirm Password</Text>
-            <View style={styles.passwordWrap}>
-              <TextInput
-                ref={confirmRef}
-                style={[
-                  commonStyles.input,
-                  confirmFocus && commonStyles.inputFocused,
-                  {marginBottom: 0, paddingRight: 48},
-                ]}
-                placeholder="Re-enter password"
-                placeholderTextColor={colors.textTertiary}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirm}
-                returnKeyType="done"
-                onSubmitEditing={handleRegister}
-                editable={!isLoading}
-                onFocus={() => setConfirmFocus(true)}
-                onBlur={() => setConfirmFocus(false)}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowConfirm(v => !v)}>
-                <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Hints */}
-          <View style={styles.hintRow}>
-            {hints.map(h => (
-              <View key={h.label} style={styles.hintItem}>
-                <Text
+          {/* Password strength hint */}
+          {password.length > 0 && (
+            <View style={styles.strengthRow}>
+              {[6, 8, 12].map((threshold, i) => (
+                <View
+                  key={i}
                   style={[
-                    styles.hintDot,
-                    {color: h.met ? colors.success : colors.textDisabled},
-                  ]}>
-                  ●
-                </Text>
-                <Text
-                  style={[
-                    styles.hintText,
-                    {color: h.met ? colors.success : colors.textTertiary},
-                  ]}>
-                  {h.label}
-                </Text>
-              </View>
-            ))}
-          </View>
+                    styles.strengthBar,
+                    {
+                      backgroundColor:
+                        password.length >= threshold
+                          ? i === 0
+                            ? colors.error
+                            : i === 1
+                            ? colors.warning
+                            : colors.success
+                          : colors.border,
+                    },
+                  ]}
+                />
+              ))}
+              <Text style={styles.strengthLabel}>
+                {password.length < 6
+                  ? "Weak"
+                  : password.length < 12
+                  ? "Good"
+                  : "Strong"}
+              </Text>
+            </View>
+          )}
 
-          {/* Submit */}
+          <Field
+            label="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Re-enter password"
+            inputRef={confirmRef}
+            secureTextEntry={!showConfirm}
+            onToggleSecure={() => setShowConfirm((v) => !v)}
+            autoComplete="new-password"
+            returnKeyType="done"
+          />
+
           <TouchableOpacity
-            style={[styles.submitBtn, isLoading && styles.btnDisabled]}
+            style={[commonStyles.button, isSubmitting && styles.btnDisabled]}
             onPress={handleRegister}
-            disabled={isLoading}
-            activeOpacity={0.85}>
-            {isLoading ? (
+            disabled={isSubmitting}
+            activeOpacity={0.85}
+          >
+            {isSubmitting ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <Text style={commonStyles.buttonText}>Create Account</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.signinRow}
-            onPress={() => navigation.goBack()}
-            disabled={isLoading}
-            activeOpacity={0.7}>
-            <Text style={styles.signinText}>
-              Already have an account?{' '}
-              <Text style={styles.signinLink}>Sign in</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Security note */}
-        <View style={styles.securityNote}>
-          <Text style={styles.securityText}>
-            🔒 Your data is encrypted with 256-bit SSL and stored securely.
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginHint}>Already have an account? </Text>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  root: {flex: 1, backgroundColor: colors.background},
-  scroll: {flexGrow: 1, paddingBottom: 32},
-
-  header: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-  },
-  logoBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.35,
-        shadowRadius: 10,
-      },
-      android: {elevation: 6},
-    }),
-  },
-  logoLetter: {fontSize: 28, fontWeight: '800', color: colors.white},
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  headerSub: {fontSize: 14, color: colors.textSecondary},
-
-  formCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.backgroundWhite,
-    borderRadius: 20,
+  safeArea: { flex: 1, backgroundColor: colors.backgroundWhite },
+  flex: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
     padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0f172a',
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-      },
-      android: {elevation: 4},
-    }),
+    paddingBottom: 40,
   },
-
-  nameRow: {flexDirection: 'row', gap: 10, marginBottom: 0},
-  halfField: {flex: 1},
-  fieldGroup: {marginBottom: 6, marginTop: 10},
-  fieldLabel: {
+  fieldWrap: { marginBottom: 4 },
+  label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: 6,
   },
-
-  passwordWrap: {position: 'relative'},
+  nameRow: { flexDirection: "row", gap: 12 },
+  nameField: { flex: 1 },
+  inputWithEye: { paddingRight: 48 },
   eyeBtn: {
-    position: 'absolute',
+    position: "absolute",
     right: 14,
     top: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    height: 52,
+    justifyContent: "center",
   },
-  eyeIcon: {fontSize: 16},
-
-  hintRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
-    marginBottom: 18,
+  eyeIcon: { fontSize: 18 },
+  strengthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: -8,
+    marginBottom: 14,
   },
-  hintItem: {flexDirection: 'row', alignItems: 'center', gap: 4},
-  hintDot: {fontSize: 8},
-  hintText: {fontSize: 12},
-
-  submitBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.35,
-        shadowRadius: 10,
-      },
-      android: {elevation: 5},
-    }),
-  },
-  btnDisabled: {opacity: 0.6},
-
-  signinRow: {alignItems: 'center', paddingVertical: 16},
-  signinText: {fontSize: 14, color: colors.textSecondary},
-  signinLink: {color: colors.primary, fontWeight: '600'},
-
-  securityNote: {
-    marginHorizontal: 20,
+  strengthBar: { flex: 1, height: 4, borderRadius: 2 },
+  strengthLabel: { fontSize: 12, color: colors.textSecondary, minWidth: 44 },
+  btnDisabled: { opacity: 0.6 },
+  loginRow: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
-    backgroundColor: colors.backgroundWhite,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
   },
-  securityText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
+  loginHint: { fontSize: 14, color: colors.textSecondary },
+  loginLink: { fontSize: 14, color: colors.primary, fontWeight: "600" },
 });
 
 export default RegisterScreen;
