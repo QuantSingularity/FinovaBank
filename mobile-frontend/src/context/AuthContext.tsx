@@ -1,9 +1,9 @@
 /**
- * AuthContext — FinovaBank Expo Edition
+ * AuthContext - FinovaBank Expo Edition
  *
  * Fixes vs. original:
  * 1. Uses expo-secure-store (OS keychain) instead of AsyncStorage for tokens.
- * 2. isLoading no longer set to true during login/register — avoids
+ * 2. isLoading no longer set to true during login/register - avoids
  *    full-screen spinner for interactive actions; errors surface properly.
  * 3. logout() always clears local state even if the server call fails.
  * 4. useAuth() throws a descriptive error if used outside provider.
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       if (userToken) await logoutUser();
     } catch {
-      // Ignore server errors — clear locally regardless
+      // Ignore server errors - clear locally regardless
     } finally {
       await clearAuth();
     }

@@ -101,7 +101,7 @@ const FEATURES = [
     icon: <SpeedIcon />,
     color: "#2563eb",
     title: "Instant Transfers",
-    desc: "Move money in seconds — domestic or international — with real-time confirmation and zero hidden fees.",
+    desc: "Move money in seconds - domestic or international - with real-time confirmation and zero hidden fees.",
   },
   {
     icon: <BarChartIcon />,
@@ -131,7 +131,7 @@ const FEATURES = [
     icon: <SupportAgentIcon />,
     color: "#0284c7",
     title: "24 / 7 Support",
-    desc: "Human support agents available round the clock — via chat, phone, or in-app video call.",
+    desc: "Human support agents available round the clock - via chat, phone, or in-app video call.",
   },
 ];
 
@@ -425,7 +425,7 @@ const HomePage: React.FC = () => {
               }}
             >
               Manage your money, track spending, grow savings, and transfer
-              globally — all from one beautifully simple account.
+              globally - all from one beautifully simple account.
             </Typography>
 
             <Box
@@ -829,7 +829,7 @@ const HomePage: React.FC = () => {
                 },
               }}
             >
-              Get Started — It's Free
+              Get Started - It's Free
             </Button>
             <Button
               variant="outlined"

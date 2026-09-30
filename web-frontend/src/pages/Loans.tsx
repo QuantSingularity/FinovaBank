@@ -573,7 +573,7 @@ const Loans: React.FC = () => {
               >
                 {LOAN_TYPES.map((t) => (
                   <MenuItem key={t.value} value={t.value}>
-                    {t.label} — {t.rate}% p.a.
+                    {t.label} - {t.rate}% p.a.
                   </MenuItem>
                 ))}
               </TextField>

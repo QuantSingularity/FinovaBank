@@ -45,7 +45,7 @@ echo "[ 1/4 ] ruff ────────────────────�
 if command -v ruff &>/dev/null; then
     ruff check "$TARGET" --fix
 else
-    echo "  ruff not installed — run: pip install ruff"
+    echo "  ruff not installed - run: pip install ruff"
 fi
 
 # ── flake8 ────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ echo "[ 2/4 ] flake8 ───────────────────�
 if command -v flake8 &>/dev/null; then
     flake8 "$TARGET" --max-line-length 100 --statistics
 else
-    echo "  flake8 not installed — run: pip install flake8"
+    echo "  flake8 not installed - run: pip install flake8"
 fi
 
 # ── mypy ──────────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ echo "[ 3/4 ] mypy ────────────────────�
 if command -v mypy &>/dev/null; then
     mypy "$TARGET" --ignore-missing-imports
 else
-    echo "  mypy not installed — run: pip install mypy"
+    echo "  mypy not installed - run: pip install mypy"
 fi
 
 # ── pylint ────────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ echo "[ 4/4 ] pylint ───────────────────�
 if command -v pylint &>/dev/null; then
     find "$TARGET" -name "*.py" | xargs pylint
 else
-    echo "  pylint not installed — run: pip install pylint"
+    echo "  pylint not installed - run: pip install pylint"
 fi
 
 echo ""

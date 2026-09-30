@@ -1,5 +1,5 @@
 /**
- * App Configuration — Expo edition
+ * App Configuration - Expo edition
  * Uses EXPO_PUBLIC_ prefix so values are inlined at build time.
  * Set these in your .env file (copy from .env.example).
  */

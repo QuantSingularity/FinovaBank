@@ -131,7 +131,7 @@ const TransactionsScreen = () => {
   };
 
   const openFilters = () => {
-    // Register a callback in FilterStore — avoids passing functions via nav params
+    // Register a callback in FilterStore - avoids passing functions via nav params
     const key = FilterStore.register((applied) => {
       setFilter(applied);
       if (applied.type !== undefined) {

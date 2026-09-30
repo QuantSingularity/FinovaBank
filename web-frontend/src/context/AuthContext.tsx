@@ -42,7 +42,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Demo user — allows the app to open directly on the Homepage without login
+// Demo user - allows the app to open directly on the Homepage without login
 const DEMO_USER: User = {
   id: "demo-001",
   name: "Demo User",

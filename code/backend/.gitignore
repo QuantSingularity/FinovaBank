@@ -48,7 +48,7 @@ buildNumber.properties
 spring-boot-devtools.properties
 
 # Local profile / override files that often contain secrets or local config.
-# Note: do NOT ignore application.yml or application.properties by default —
+# Note: do NOT ignore application.yml or application.properties by default -
 # only ignore local override files or explicitly sensitive files.
 /application-*.local.yml
 /application-*.local.properties
@@ -143,7 +143,7 @@ build/
 # -------------------------
 # Misc / security
 # -------------------------
-# Private keys, secrets and credentials — never commit
+# Private keys, secrets and credentials - never commit
 secrets.properties
 credentials.yml
 *.pem

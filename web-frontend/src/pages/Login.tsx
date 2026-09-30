@@ -356,7 +356,7 @@ const Login: React.FC = () => {
               variant="caption"
               sx={{ opacity: 0.7, mt: 1, display: "block" }}
             >
-              — Sarah K., Premium Member
+              - Sarah K., Premium Member
             </Typography>
           </Box>
         </Box>

@@ -190,7 +190,7 @@ const Profile: React.FC = () => {
                   />
                 ) : (
                   <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                    {user?.name || "—"}
+                    {user?.name || "-"}
                   </Typography>
                 )}
               </Box>
@@ -213,7 +213,7 @@ const Profile: React.FC = () => {
                 >
                   <EmailIcon sx={{ fontSize: 16, color: "text.secondary" }} />
                   <Typography variant="body1" fontWeight={600}>
-                    {user?.email || "—"}
+                    {user?.email || "-"}
                   </Typography>
                 </Box>
               </Box>
@@ -231,7 +231,7 @@ const Profile: React.FC = () => {
                   fontFamily="monospace"
                   sx={{ mt: 0.5, color: "text.secondary" }}
                 >
-                  {user?.id || "—"}
+                  {user?.id || "-"}
                 </Typography>
               </Box>
               <Box>

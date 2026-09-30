@@ -1,5 +1,5 @@
 /**
- * AppNavigator — FinovaBank Expo Edition
+ * AppNavigator - FinovaBank Expo Edition
  *
  * Changes vs original:
  * - Wraps everything in SafeAreaProvider (fixes notch/status-bar overlap)

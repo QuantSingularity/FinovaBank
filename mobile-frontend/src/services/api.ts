@@ -1,5 +1,5 @@
 /**
- * API Service — FinovaBank
+ * API Service - FinovaBank
  * Uses expo-secure-store instead of AsyncStorage for the auth token
  * so credentials are stored in the OS keychain / encrypted storage.
  */

@@ -202,10 +202,10 @@ const Settings: React.FC = () => {
             size="small"
           >
             {[
-              { value: "USD", label: "USD — US Dollar" },
-              { value: "EUR", label: "EUR — Euro" },
-              { value: "GBP", label: "GBP — British Pound" },
-              { value: "PKR", label: "PKR — Pakistani Rupee" },
+              { value: "USD", label: "USD - US Dollar" },
+              { value: "EUR", label: "EUR - Euro" },
+              { value: "GBP", label: "GBP - British Pound" },
+              { value: "PKR", label: "PKR - Pakistani Rupee" },
             ].map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}

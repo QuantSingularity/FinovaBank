@@ -1,4 +1,4 @@
-# FinovaBank Mobile — Expo Edition
+# FinovaBank Mobile - Expo Edition
 
 A full-featured mobile banking frontend built with **Expo SDK 52** and React Native.
 
@@ -46,7 +46,7 @@ npx expo start
 | **Loans**               | Active loans + loan application form with payment estimator |
 | **Savings Goals**       | Goal tracking + contributions + progress bars               |
 | **Account Details**     | Full account info with balance hero                         |
-| **Transfer**            | Send money — internal, external, or bill pay                |
+| **Transfer**            | Send money - internal, external, or bill pay                |
 | **Notifications**       | In-app notification feed                                    |
 | **Profile**             | Edit name, change password, app info                        |
 
