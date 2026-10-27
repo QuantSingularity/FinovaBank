@@ -27,7 +27,9 @@ describe("Register Page", () => {
 
   test("renders registration form step 1", () => {
     renderRegister();
-    expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Create Your Account/i }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
   });

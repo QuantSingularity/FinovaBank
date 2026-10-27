@@ -1,26 +1,31 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import React from "react";
-import { BrowserRouter } from "react-router-dom";
+import type React from "react";
 import { AuthProvider, useAuth } from "../AuthContext";
 
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
-const mockVerifyToken = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock("../../services/api", () => ({
   authAPI: {
-    login: (...a: any[]) => mockLogin(...a),
-    register: (...a: any[]) => mockRegister(...a),
-    verifyToken: (...a: any[]) => mockVerifyToken(...a),
+    login: (...args: unknown[]) => mockLogin(...args),
+    register: (...args: unknown[]) => mockRegister(...args),
   },
 }));
+
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
+
+const REAL_USER = {
+  id: "1",
+  name: "Test User",
+  email: "test@example.com",
+  role: "USER",
+  createdAt: "",
+};
 
 const TestComponent: React.FC = () => {
   const {
@@ -33,18 +38,25 @@ const TestComponent: React.FC = () => {
     error,
     clearError,
   } = useAuth();
+
+  // login and register reject on failure; the rejection is already surfaced
+  // through the context's error state, so swallow it in the click handlers.
+  const noop = () => {};
+
   return (
     <div>
       <p>Authenticated: {isAuthenticated ? "Yes" : "No"}</p>
       <p>Loading: {loading ? "Yes" : "No"}</p>
       {user && <p>User: {user.name}</p>}
       {error && <p>Error: {error}</p>}
-      <button onClick={() => login("test@example.com", "password")}>
+      <button onClick={() => login("test@example.com", "password").catch(noop)}>
         Login
       </button>
       <button onClick={logout}>Logout</button>
       <button
-        onClick={() => register("Test User", "test@example.com", "password123")}
+        onClick={() =>
+          register("Test User", "test@example.com", "password123").catch(noop)
+        }
       >
         Register
       </button>
@@ -55,25 +67,15 @@ const TestComponent: React.FC = () => {
 
 const renderWithAuth = () =>
   render(
-    <BrowserRouter>
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    </BrowserRouter>,
+    <AuthProvider>
+      <TestComponent />
+    </AuthProvider>,
   );
 
 describe("AuthContext", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     sessionStorage.clear();
-    mockVerifyToken.mockResolvedValue({ data: { valid: false } });
-  });
-
-  test("starts as not authenticated with no session", async () => {
-    renderWithAuth();
-    await waitFor(() => {
-      expect(screen.getByText("Authenticated: No")).toBeInTheDocument();
-    });
   });
 
   test("throws error if useAuth is used outside AuthProvider", () => {
@@ -86,156 +88,193 @@ describe("AuthContext", () => {
     consoleSpy.mockRestore();
   });
 
-  test("sets authenticated state after successful login", async () => {
-    mockLogin.mockResolvedValueOnce({
-      data: {
-        token: "test-token",
-        user: {
-          id: "1",
-          name: "Test User",
-          email: "test@example.com",
-          role: "USER",
-          createdAt: "",
-        },
-      },
-    });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
-    await waitFor(() => {
+  // The provider currently runs in demo mode: it starts with a signed-in demo
+  // user so the app can be explored without an account. If demo mode is
+  // removed, replace this block with tests for the real startup flow.
+  describe("demo mode defaults", () => {
+    test("starts authenticated as the demo user", () => {
+      renderWithAuth();
       expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
+      expect(screen.getByText("User: Demo User")).toBeInTheDocument();
+    });
+
+    test("starts without loading or an error", () => {
+      renderWithAuth();
+      expect(screen.getByText("Loading: No")).toBeInTheDocument();
+      expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
+    });
+
+    test("seeds sessionStorage with a demo session when none exists", () => {
+      renderWithAuth();
+      expect(sessionStorage.getItem("token")).toBe("demo-token");
+      expect(JSON.parse(sessionStorage.getItem("user") ?? "{}")).toMatchObject({
+        id: "demo-001",
+        email: "demo@finovabank.com",
+      });
+    });
+
+    test("does not overwrite an existing stored token", () => {
+      sessionStorage.setItem("token", "existing-token");
+      renderWithAuth();
+      expect(sessionStorage.getItem("token")).toBe("existing-token");
     });
   });
 
-  test("stores token in sessionStorage after login", async () => {
-    mockLogin.mockResolvedValueOnce({
-      data: {
-        token: "test-token-123",
-        user: {
-          id: "1",
-          name: "Test User",
-          email: "test@example.com",
-          role: "USER",
-          createdAt: "",
-        },
-      },
-    });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
-    await waitFor(() => {
-      expect(sessionStorage.getItem("token")).toBe("test-token-123");
-    });
-  });
+  describe("login", () => {
+    test("replaces the demo user with the signed-in user", async () => {
+      mockLogin.mockResolvedValueOnce({
+        data: { token: "test-token", user: REAL_USER },
+      });
+      renderWithAuth();
 
-  test("clears session and sets unauthenticated on logout", async () => {
-    mockLogin.mockResolvedValueOnce({
-      data: {
-        token: "test-token",
-        user: {
-          id: "1",
-          name: "Test User",
-          email: "test@example.com",
-          role: "USER",
-          createdAt: "",
-        },
-      },
-    });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
-    await waitFor(() => screen.getByText("Authenticated: Yes"));
-    fireEvent.click(screen.getByRole("button", { name: /Logout/i }));
-    await waitFor(() => {
-      expect(sessionStorage.getItem("token")).toBeNull();
-    });
-  });
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
 
-  test("sets authenticated from valid session on mount", async () => {
-    sessionStorage.setItem("token", "existing-token");
-    sessionStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: "2",
-        name: "Stored User",
-        email: "stored@example.com",
-        role: "USER",
-        createdAt: "",
-      }),
-    );
-    mockVerifyToken.mockResolvedValueOnce({ data: { valid: true } });
-    renderWithAuth();
-    await waitFor(() => {
+      expect(await screen.findByText("User: Test User")).toBeInTheDocument();
       expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
-      expect(screen.getByText("User: Stored User")).toBeInTheDocument();
+      expect(mockLogin).toHaveBeenCalledWith("test@example.com", "password");
     });
-  });
 
-  test("keeps session on token verification network error", async () => {
-    sessionStorage.setItem("token", "existing-token");
-    sessionStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: "2",
-        name: "Stored User",
-        email: "stored@example.com",
-        role: "USER",
-        createdAt: "",
-      }),
-    );
-    mockVerifyToken.mockRejectedValueOnce(new Error("Network Error"));
-    renderWithAuth();
-    await waitFor(() => {
-      expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
-    });
-  });
+    test("stores the token and user in sessionStorage", async () => {
+      mockLogin.mockResolvedValueOnce({
+        data: { token: "test-token-123", user: REAL_USER },
+      });
+      renderWithAuth();
 
-  test("registers user and sets authenticated", async () => {
-    mockRegister.mockResolvedValueOnce({
-      data: {
-        token: "reg-token",
-        user: {
-          id: "3",
-          name: "New User",
-          email: "new@example.com",
-          role: "USER",
-          createdAt: "",
-        },
-      },
-    });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Register/i }));
-    await waitFor(() => {
-      expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
-    });
-  });
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
 
-  test("sets error on failed login", async () => {
-    mockLogin.mockRejectedValueOnce({
-      response: { data: { message: "Invalid credentials" } },
+      await waitFor(() => {
+        expect(sessionStorage.getItem("token")).toBe("test-token-123");
+      });
+      expect(JSON.parse(sessionStorage.getItem("user") ?? "{}")).toEqual(
+        REAL_USER,
+      );
     });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
-    await waitFor(() => {
+
+    test("navigates to the dashboard after a successful login", async () => {
+      mockLogin.mockResolvedValueOnce({
+        data: { token: "test-token", user: REAL_USER },
+      });
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+      });
+    });
+
+    test("shows the server message when login fails", async () => {
+      mockLogin.mockRejectedValueOnce({
+        response: { data: { message: "Invalid credentials" } },
+      });
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+
       expect(
-        screen.getByText(/Error: Invalid credentials/i),
+        await screen.findByText("Error: Invalid credentials"),
+      ).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    test("falls back to a default message when the server gives none", async () => {
+      mockLogin.mockRejectedValueOnce(new Error("Network Error"));
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+
+      expect(
+        await screen.findByText(
+          "Error: Login failed. Please check your credentials.",
+        ),
       ).toBeInTheDocument();
     });
+
+    test("stops loading after a failed login", async () => {
+      mockLogin.mockRejectedValueOnce(new Error("Network Error"));
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+
+      await screen.findByText(/^Error:/);
+      expect(screen.getByText("Loading: No")).toBeInTheDocument();
+    });
+
+    test("clearError removes the error", async () => {
+      mockLogin.mockRejectedValueOnce({
+        response: { data: { message: "Bad credentials" } },
+      });
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Login/i }));
+      await screen.findByText("Error: Bad credentials");
+
+      fireEvent.click(screen.getByRole("button", { name: /Clear Error/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
+      });
+    });
   });
 
-  test("clearError removes the error", async () => {
-    mockLogin.mockRejectedValueOnce({
-      response: { data: { message: "Bad credentials" } },
+  describe("register", () => {
+    test("registers the user, stores the session, and goes to the dashboard", async () => {
+      mockRegister.mockResolvedValueOnce({
+        data: {
+          token: "reg-token",
+          user: { ...REAL_USER, id: "3", name: "New User" },
+        },
+      });
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Register/i }));
+
+      expect(await screen.findByText("User: New User")).toBeInTheDocument();
+      expect(screen.getByText("Authenticated: Yes")).toBeInTheDocument();
+      expect(mockRegister).toHaveBeenCalledWith(
+        "Test User",
+        "test@example.com",
+        "password123",
+      );
+      expect(sessionStorage.getItem("token")).toBe("reg-token");
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
     });
-    renderWithAuth();
-    await waitFor(() => screen.getByText("Authenticated: No"));
-    fireEvent.click(screen.getByRole("button", { name: /Login/i }));
-    await waitFor(() => screen.getByText(/Error: Bad credentials/i));
-    fireEvent.click(screen.getByRole("button", { name: /Clear Error/i }));
-    await waitFor(() => {
-      expect(screen.queryByText(/Error:/i)).not.toBeInTheDocument();
+
+    test("shows a default message when registration fails", async () => {
+      mockRegister.mockRejectedValueOnce(new Error("Network Error"));
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Register/i }));
+
+      expect(
+        await screen.findByText(
+          "Error: Registration failed. Please try again.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("logout", () => {
+    test("clears the session and marks the user as unauthenticated", async () => {
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Logout/i }));
+
+      expect(await screen.findByText("Authenticated: No")).toBeInTheDocument();
+      expect(screen.queryByText(/^User:/)).not.toBeInTheDocument();
+      expect(sessionStorage.getItem("token")).toBeNull();
+      expect(sessionStorage.getItem("user")).toBeNull();
+    });
+
+    test("navigates to the public homepage", async () => {
+      renderWithAuth();
+
+      fireEvent.click(screen.getByRole("button", { name: /Logout/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith("/home");
+      });
     });
   });
 });

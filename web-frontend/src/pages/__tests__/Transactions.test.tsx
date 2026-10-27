@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BrowserRouter } from "react-router-dom";
 import Transactions from "../Transactions";
@@ -103,10 +109,13 @@ describe("Transactions Page", () => {
 
   test("opens New Transaction dialog", async () => {
     renderComponent();
-    await waitFor(() => screen.getByText(/New Transaction/i));
-    fireEvent.click(screen.getAllByText(/New Transaction/i)[0]);
-    await waitFor(() => {
-      expect(screen.getByText(/New Transaction$/i)).toBeInTheDocument();
-    });
+    // The page button and the dialog title share the same text, so open the
+    // dialog via the button role and scope the assertions to the dialog.
+    fireEvent.click(
+      await screen.findByRole("button", { name: /New Transaction/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("New Transaction")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Account ID/i)).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ import Loans from "../Loans";
 
 const mockLoans = [
   {
-    loanId: "LOAN-001",
+    loanId: "d4f7c1a2-8b3e-4f60-9a1d-5c2e7b9a41f6",
     loanAmount: 10000,
     loanType: "PERSONAL",
     interestRate: 5.25,
@@ -51,9 +51,8 @@ describe("Loans Page", () => {
 
   test("renders loan cards after loading", async () => {
     renderComponent();
-    await waitFor(() => {
-      expect(screen.getByText(/LOAN-001/i)).toBeInTheDocument();
-    });
+    // Long loan IDs are abbreviated to their last six characters.
+    expect(await screen.findByText("Loan #9A41F6")).toBeInTheDocument();
   });
 
   test("renders Loan Management heading", async () => {
@@ -65,18 +64,21 @@ describe("Loans Page", () => {
 
   test("renders Apply for Loan button", async () => {
     renderComponent();
-    await waitFor(() => {
-      expect(screen.getAllByText(/Apply for Loan/i).length).toBeGreaterThan(0);
-    });
+    expect(
+      await screen.findByRole("button", { name: /Apply for Loan/i }),
+    ).toBeInTheDocument();
   });
 
   test("opens loan application dialog", async () => {
     renderComponent();
-    await waitFor(() => screen.getByText(/Apply for Loan/i));
-    fireEvent.click(screen.getAllByText(/Apply for Loan/i)[0]);
-    await waitFor(() => {
-      expect(screen.getByText(/Apply for a New Loan/i)).toBeInTheDocument();
-    });
+    // The page subtitle ("Apply for loans and track...") also matches the
+    // button text, so target the button by role.
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Apply for Loan/i }),
+    );
+    expect(
+      await screen.findByText(/Apply for a New Loan/i),
+    ).toBeInTheDocument();
   });
 
   test("shows loan interest rate and amount", async () => {

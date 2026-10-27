@@ -23,7 +23,6 @@ if (typeof window.IntersectionObserver === "undefined") {
   window.IntersectionObserver = MockObserver;
 }
 if (typeof window.ResizeObserver === "undefined") {
-  // @ts-expect-error - assigning a test polyfill
   window.ResizeObserver = MockObserver;
 }
 

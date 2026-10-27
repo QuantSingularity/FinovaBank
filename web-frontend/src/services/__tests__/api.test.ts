@@ -1,5 +1,4 @@
-import axios from "axios";
-import {
+import api, {
   accountAPI,
   authAPI,
   loanAPI,
@@ -8,23 +7,45 @@ import {
   transactionAPI,
 } from "../api";
 
-jest.mock("axios");
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// api.ts calls axios.create() as soon as it is imported, and jest.mock calls
+// are hoisted above imports. The mocked instance therefore has to be built
+// inside the factory so it already exists when api.ts is evaluated; setting
+// it up in the test body would run too late.
+jest.mock("axios", () => {
+  const instance = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() },
+    },
+  };
+  return {
+    __esModule: true,
+    default: { create: jest.fn(() => instance) },
+  };
+});
 
-const mockApiInstance = {
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
+// The default export of api.ts is the (mocked) axios instance.
+const mockApiInstance = api as unknown as {
+  get: jest.Mock;
+  post: jest.Mock;
+  put: jest.Mock;
+  delete: jest.Mock;
   interceptors: {
-    request: { use: jest.fn() },
-    response: { use: jest.fn() },
-  },
+    request: { use: jest.Mock };
+    response: { use: jest.Mock };
+  };
 };
 
-mockedAxios.create.mockReturnValue(mockApiInstance as any);
-
-jest.resetModules();
+// Interceptors are registered once at import time. Capture them here, before
+// the beforeEach hook below clears the mock call history.
+const [requestInterceptor] = mockApiInstance.interceptors.request.use.mock
+  .calls[0] as [(config: { headers: Record<string, string> }) => any];
+const [, responseErrorInterceptor] = mockApiInstance.interceptors.response.use
+  .mock.calls[0] as [unknown, (error: unknown) => Promise<never>];
 
 describe("API Service", () => {
   beforeEach(() => {
@@ -209,6 +230,50 @@ describe("API Service", () => {
         reportType: "ACCOUNT_SUMMARY",
         requestedBy: "John",
       });
+    });
+  });
+
+  describe("request interceptor", () => {
+    test("adds a Bearer token header when a token is stored", () => {
+      sessionStorage.setItem("token", "abc123");
+      const config = requestInterceptor({ headers: {} });
+      expect(config.headers.Authorization).toBe("Bearer abc123");
+    });
+
+    test("leaves headers untouched when no token is stored", () => {
+      const config = requestInterceptor({ headers: {} });
+      expect(config.headers.Authorization).toBeUndefined();
+    });
+  });
+
+  describe("response error interceptor", () => {
+    beforeEach(() => {
+      // Already on /login, so the interceptor does not try to navigate.
+      window.history.pushState({}, "", "/login");
+    });
+
+    afterEach(() => {
+      window.history.pushState({}, "", "/");
+    });
+
+    test("clears the stored session and rejects on a 401 response", async () => {
+      sessionStorage.setItem("token", "abc123");
+      sessionStorage.setItem("user", JSON.stringify({ id: "1" }));
+      const error = { response: { status: 401 } };
+
+      await expect(responseErrorInterceptor(error)).rejects.toBe(error);
+
+      expect(sessionStorage.getItem("token")).toBeNull();
+      expect(sessionStorage.getItem("user")).toBeNull();
+    });
+
+    test("keeps the stored session on other error statuses", async () => {
+      sessionStorage.setItem("token", "abc123");
+      const error = { response: { status: 500 } };
+
+      await expect(responseErrorInterceptor(error)).rejects.toBe(error);
+
+      expect(sessionStorage.getItem("token")).toBe("abc123");
     });
   });
 });

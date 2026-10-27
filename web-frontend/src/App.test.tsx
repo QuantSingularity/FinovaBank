@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { BrowserRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 
 jest.mock("./context/AuthContext", () => ({
@@ -22,21 +22,21 @@ jest.mock("./context/AuthContext", () => ({
 describe("App", () => {
   test("renders without crashing", () => {
     const { container } = render(
-      <BrowserRouter>
+      <MemoryRouter>
         <App />
-      </BrowserRouter>,
+      </MemoryRouter>,
     );
     expect(container).toBeInTheDocument();
   });
 
-  test("redirects to login page when not authenticated", async () => {
+  test("shows the public homepage to unauthenticated visitors at the root", async () => {
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={["/"]}>
         <App />
-      </BrowserRouter>,
+      </MemoryRouter>,
     );
-    await waitFor(() => {
-      expect(screen.getByText(/Welcome Back/i)).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByRole("button", { name: /Open Free Account/i }),
+    ).toBeInTheDocument();
   });
 });
